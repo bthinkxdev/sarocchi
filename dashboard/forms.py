@@ -11,6 +11,7 @@ from catalog.models import (
     Category,
     Product,
     ProductImage,
+    ProductVideo,
     ProductSpecification,
     ProductVariant,
     Review,
@@ -208,6 +209,23 @@ ProductImageFormSet = forms.inlineformset_factory(
     extra=1,
     can_delete=True,
 )
+
+class ProductVideoForm(forms.ModelForm):
+    class Meta:
+        model = ProductVideo
+        fields = ["video_file", "thumbnail"]
+        error_messages = {
+            "video_file": {"required": "Video file is required."},
+        }
+
+ProductVideoFormSet = forms.inlineformset_factory(
+    Product,
+    ProductVideo,
+    form=ProductVideoForm,
+    extra=1,
+    can_delete=True,
+)
+
 class ProductSpecificationForm(forms.ModelForm):
     class Meta:
         model = ProductSpecification

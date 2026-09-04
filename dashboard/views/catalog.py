@@ -146,6 +146,9 @@ def _render_product_form(request, product, mode):
         images = forms.ProductImageFormSet(
             request.POST, request.FILES, instance=product, prefix="images"
         )
+        videos = forms.ProductVideoFormSet(
+            request.POST, request.FILES, instance=product, prefix="videos"
+        )
         specifications = forms.ProductSpecificationFormSet(
             request.POST, instance=product, prefix="specifications"
         )
@@ -153,6 +156,7 @@ def _render_product_form(request, product, mode):
             form.is_valid()
             and variants.is_valid()
             and images.is_valid()
+            and videos.is_valid()
             and specifications.is_valid()
         ):
             product = form.save()
@@ -172,6 +176,8 @@ def _render_product_form(request, product, mode):
 
             images.instance = product
             images.save()
+            videos.instance = product
+            videos.save()
             specifications.instance = product
             specifications.save()
             messages.success(request, f"Product '{product.name}' saved successfully.")
@@ -181,6 +187,7 @@ def _render_product_form(request, product, mode):
         form = forms.ProductForm(instance=product)
         variants = forms.ProductVariantFormSet(instance=product, prefix="variants")
         images = forms.ProductImageFormSet(instance=product, prefix="images")
+        videos = forms.ProductVideoFormSet(instance=product, prefix="videos")
         specifications = forms.ProductSpecificationFormSet(
             instance=product, prefix="specifications"
         )
@@ -191,6 +198,8 @@ def _render_product_form(request, product, mode):
         variants.empty_form,
         *images.forms,
         images.empty_form,
+        *videos.forms,
+        videos.empty_form,
         *specifications.forms,
         specifications.empty_form,
     ]:
@@ -202,6 +211,7 @@ def _render_product_form(request, product, mode):
         "form": form,
         "variants": variants,
         "images": images,
+        "videos": videos,
         "specifications": specifications,
         "form_mode": mode,
         "product": product,

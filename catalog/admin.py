@@ -119,10 +119,9 @@ class ProductImageAdmin(admin.ModelAdmin):
 
 @admin.register(ProductVideo)
 class ProductVideoAdmin(admin.ModelAdmin):
-    """Admin for product videos."""
-
-    list_display = ("product", "video_url", "updated_at")
-    search_fields = ("product__name",)
+    list_display = ("product", "video_file", "thumbnail", "created_at")
+    list_filter = ("created_at", "updated_at")
+    search_fields = ("product__name", "video_file")
     list_select_related = ("product",)
 
 

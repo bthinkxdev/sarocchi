@@ -12,6 +12,7 @@
          fetchpriority="high">
     {% endif %}
     {% endwith %}
+    <video id="main-pdp-video" class="jm-pdp-gallery__video object-fit-contain d-none" controls width="800" height="800" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; background: #fff;"></video>
     <div class="position-absolute" style="top: 16px !important; bottom: auto !important; left: 16px !important; width: auto !important; height: auto !important; z-index: 99 !important; pointer-events: none;">
       {% if product.average_rating %}
       <span class="jm-product-card__rating shadow-sm d-inline-flex" aria-label="{% trans 'Rating' %} {{ product.average_rating|floatformat:1 }}" style="font-size: 0.85rem; padding: 0.25rem 0.6rem; background-color: rgba(247, 248, 250, 0.95); backdrop-filter: blur(4px); pointer-events: auto; width: auto;">
@@ -28,7 +29,7 @@
       {% endif %}
     </div>
   </div>
-  {% if product.images.all|length > 1 %}
+  {% if product.images.all|length > 1 or product.videos.all|length > 0 %}
   <div class="jm-pdp-gallery__thumbs" role="list">
     {% for image in product.images.all %}
     <button type="button"
@@ -37,6 +38,21 @@
             aria-label="{% trans 'View image' %} {{ forloop.counter }}"
             role="listitem">
       <img src="{{ image.image.url }}" alt="" width="72" height="72" class="object-fit-cover" loading="lazy">
+    </button>
+    {% endfor %}
+    {% for video in product.videos.all %}
+    <button type="button"
+            class="jm-pdp-gallery__thumb thumb-btn"
+            data-video="{{ video.video_file.url }}"
+            aria-label="{% trans 'View video' %} {{ forloop.counter }}"
+            role="listitem">
+      {% if video.thumbnail %}
+        <img src="{{ video.thumbnail.url }}" alt="" width="72" height="72" class="object-fit-cover" loading="lazy">
+      {% else %}
+        <div style="width: 72px; height: 72px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; position: relative;">
+          <svg width="32" height="32" fill="#94a3b8" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/></svg>
+        </div>
+      {% endif %}
     </button>
     {% endfor %}
   </div>

@@ -13,16 +13,19 @@
   /* --- MOBILE RESPONSIVE CARDS FOR OTHER TABLES --- */
   @media (max-width: 991.98px) {
     [data-formset="images"] thead,
+    [data-formset="videos"] thead,
     [data-formset="specifications"] thead,
     [data-formset="documents"] thead { display: none; }
 
     [data-formset="images"] .table-responsive, [data-formset="images"] .table,
+    [data-formset="videos"] .table-responsive, [data-formset="videos"] .table,
     [data-formset="specifications"] .table-responsive, [data-formset="specifications"] .table,
     [data-formset="documents"] .table-responsive, [data-formset="documents"] .table { 
       overflow: visible; background: transparent; border: none; padding: 0; margin: 0; min-width: 0 !important; 
     }
     
     [data-formset="images"] tbody[data-formset-body] tr,
+    [data-formset="videos"] tbody[data-formset-body] tr,
     [data-formset="specifications"] tbody[data-formset-body] tr,
     [data-formset="documents"] tbody[data-formset-body] tr {
       display: flex; flex-wrap: wrap; background: #fdfdfd; border: 1px solid #e2e8f0; border-radius: 12px;
@@ -30,12 +33,14 @@
     }
     
     [data-formset="images"] tbody[data-formset-body] td,
+    [data-formset="videos"] tbody[data-formset-body] td,
     [data-formset="specifications"] tbody[data-formset-body] td,
     [data-formset="documents"] tbody[data-formset-body] td { 
       display: block; border: none; padding: 0 16px 16px 0; margin: 0; width: 100%; box-sizing: border-box; 
     }
     
     [data-formset="images"] tbody[data-formset-body] td.d-none,
+    [data-formset="videos"] tbody[data-formset-body] td.d-none,
     [data-formset="specifications"] tbody[data-formset-body] td.d-none,
     [data-formset="documents"] tbody[data-formset-body] td.d-none { display: none; }
     
@@ -43,23 +48,27 @@
     [data-formset="images"] tbody[data-formset-body] td:nth-child(6) { width: 50%; }
     
     [data-formset="images"] tbody[data-formset-body] td:last-child,
+    [data-formset="videos"] tbody[data-formset-body] td:last-child,
     [data-formset="specifications"] tbody[data-formset-body] td:last-child,
     [data-formset="documents"] tbody[data-formset-body] td:last-child { 
       position: absolute; top: 16px; right: 16px; padding: 0; width: auto; z-index: 5; 
     }
     [data-formset="images"] tbody[data-formset-body] td:last-child .btn-icon,
+    [data-formset="videos"] tbody[data-formset-body] td:last-child .btn-icon,
     [data-formset="specifications"] tbody[data-formset-body] td:last-child .btn-icon,
     [data-formset="documents"] tbody[data-formset-body] td:last-child .btn-icon {
       border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
       background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     [data-formset="images"] tbody[data-formset-body] td:last-child .btn-icon:hover,
+    [data-formset="videos"] tbody[data-formset-body] td:last-child .btn-icon:hover,
     [data-formset="specifications"] tbody[data-formset-body] td:last-child .btn-icon:hover,
     [data-formset="documents"] tbody[data-formset-body] td:last-child .btn-icon:hover { 
       background: #fee2e2; color: #ef4444 !important; border-color: #fca5a5; 
     }
 
     [data-formset="images"] tbody[data-formset-body] td::before,
+    [data-formset="videos"] tbody[data-formset-body] td::before,
     [data-formset="specifications"] tbody[data-formset-body] td::before,
     [data-formset="documents"] tbody[data-formset-body] td::before { 
       display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; 
@@ -70,6 +79,9 @@
     [data-formset="images"] tbody[data-formset-body] td:nth-child(4)::before { content: "Alt text"; }
     [data-formset="images"] tbody[data-formset-body] td:nth-child(5)::before { content: "Order"; }
     [data-formset="images"] tbody[data-formset-body] td:nth-child(6)::before { content: "Primary"; }
+
+    [data-formset="videos"] tbody[data-formset-body] td:nth-child(2)::before { content: "Video File"; }
+    [data-formset="videos"] tbody[data-formset-body] td:nth-child(3)::before { content: "Thumbnail"; }
 
     [data-formset="specifications"] tbody[data-formset-body] td:nth-child(2)::before { content: "Specification Name"; }
     [data-formset="specifications"] tbody[data-formset-body] td:nth-child(3)::before { content: "Value"; }
@@ -364,6 +376,67 @@
               <td>{{ images.empty_form.alt_text }}</td>
               <td>{{ images.empty_form.display_order }}</td>
               <td class="text-center">{{ images.empty_form.is_primary }}</td>
+              <td class="text-center"><button type="button" class="btn btn-icon btn-sm btn-light text-danger"
+                  data-row-remove><i class="ti ti-trash"></i></button></td>
+            </tr>
+          </template>
+        </div>
+      </div>
+
+      <div class="card mb-3" data-formset="videos">
+        <div class="card-header panel-header">
+          <div>
+            <h3 class="panel-title">Videos</h3>
+            <p class="panel-sub">Upload video files and optional thumbnails</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-primary" data-formset-add><i
+              class="ti ti-plus me-1"></i>Add video</button>
+        </div>
+        <div class="card-body p-0">
+          {{ videos.management_form }}
+          {% if videos.non_form_errors %}
+          <div class="alert alert-danger mx-3 mt-3 mb-0">{{ videos.non_form_errors|join:", " }}</div>
+          {% endif %}
+          <div class="table-responsive">
+            <table class="table repeater align-middle mb-0">
+              <thead>
+                <tr>
+                  <th class="d-none"></th>
+                  <th>Video File</th>
+                  <th>Thumbnail</th>
+                  <th class="text-center">Remove</th>
+                </tr>
+              </thead>
+              <tbody data-formset-body>
+                {% for vform in videos %}
+                <tr>
+                  <td class="d-none">{{ vform.id }}</td>
+                  <td>
+                    {{ vform.video_file }}
+                    {% if vform.video_file.errors %}<div class="text-danger small mt-1">{{ vform.video_file.errors|join:", " }}</div>{% endif %}
+                  </td>
+                  <td>
+                    {{ vform.thumbnail }}
+                    {% if vform.thumbnail.errors %}<div class="text-danger small mt-1">{{ vform.thumbnail.errors|join:", " }}</div>{% endif %}
+                  </td>
+                  <td class="text-center">
+                    {% if vform.instance.pk %}
+                    <label class="form-check d-inline-flex m-0" title="Delete on save">{{ vform.DELETE }}</label>
+                    {% else %}
+                    <button type="button" class="btn btn-icon btn-sm btn-light text-danger" data-row-remove><i
+                        class="ti ti-trash"></i></button>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <template data-formset-empty>
+            <tr>
+              <td class="d-none">{{ videos.empty_form.id }}</td>
+              <td>{{ videos.empty_form.video_file }}</td>
+              <td>{{ videos.empty_form.thumbnail }}</td>
               <td class="text-center"><button type="button" class="btn btn-icon btn-sm btn-light text-danger"
                   data-row-remove><i class="ti ti-trash"></i></button></td>
             </tr>

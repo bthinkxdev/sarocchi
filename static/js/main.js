@@ -295,7 +295,26 @@
       btn.dataset.boundThumb = '1';
       btn.addEventListener('click', function () {
         var main = document.getElementById('main-pdp-image');
-        if (main) main.src = this.getAttribute('data-full');
+        var mainVideo = document.getElementById('main-pdp-video');
+        
+        if (this.hasAttribute('data-video')) {
+          if (main) main.classList.add('d-none');
+          if (mainVideo) {
+            mainVideo.src = this.getAttribute('data-video');
+            mainVideo.classList.remove('d-none');
+            mainVideo.play();
+          }
+        } else {
+          if (mainVideo) {
+            mainVideo.pause();
+            mainVideo.classList.add('d-none');
+          }
+          if (main) {
+            main.src = this.getAttribute('data-full');
+            main.classList.remove('d-none');
+          }
+        }
+        
         document.querySelectorAll('.thumb-btn').forEach(function (b) {
           b.classList.remove('active', 'is-active');
         });

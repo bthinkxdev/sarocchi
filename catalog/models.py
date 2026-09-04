@@ -457,7 +457,10 @@ class ProductVideo(TimeStampedModel):
         related_name="videos",
         verbose_name="Product",
     )
-    video_url = models.URLField(verbose_name="Video URL")
+    video_file = models.FileField(
+        upload_to="products/videos/",
+        verbose_name="Video File",
+    )
     thumbnail = models.ImageField(
         upload_to="products/video_thumbs/",
         blank=True,
