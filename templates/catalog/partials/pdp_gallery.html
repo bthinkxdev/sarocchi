@@ -35,6 +35,7 @@
     <button type="button"
             class="jm-pdp-gallery__thumb thumb-btn{% if forloop.first %} is-active active{% endif %}"
             data-full="{{ image.image.url }}"
+            {% if image.variant_id %}data-variant-id="{{ image.variant_id }}"{% endif %}
             aria-label="{% trans 'View image' %} {{ forloop.counter }}"
             role="listitem">
       <img src="{{ image.image.url }}" alt="" width="72" height="72" class="object-fit-cover" loading="lazy">
@@ -44,6 +45,7 @@
     <button type="button"
             class="jm-pdp-gallery__thumb thumb-btn"
             data-video="{{ video.video_file.url }}"
+            {% if video.variant_id %}data-variant-id="{{ video.variant_id }}"{% endif %}
             aria-label="{% trans 'View video' %} {{ forloop.counter }}"
             role="listitem">
       {% if video.thumbnail %}

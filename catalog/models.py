@@ -413,6 +413,14 @@ class ProductImage(TimeStampedModel):
         related_name="images",
         verbose_name="Product",
     )
+    variant = models.ForeignKey(
+        "ProductVariant",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="images",
+        verbose_name="Variant",
+    )
     image = models.ImageField(
         upload_to="products/images/",
         verbose_name="Image",
@@ -456,6 +464,14 @@ class ProductVideo(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="videos",
         verbose_name="Product",
+    )
+    variant = models.ForeignKey(
+        "ProductVariant",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="videos",
+        verbose_name="Variant",
     )
     video_file = models.FileField(
         upload_to="products/videos/",

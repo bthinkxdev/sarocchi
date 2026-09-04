@@ -11,6 +11,25 @@
           input.value = vid;
         });
 
+        var thumbs = document.querySelectorAll('.jm-pdp-gallery__thumb');
+        var firstVisible = null;
+        thumbs.forEach(function (thumb) {
+          var thumbVid = thumb.getAttribute('data-variant-id');
+          if (!thumbVid || thumbVid === vid) {
+            thumb.style.display = '';
+            if (!firstVisible) firstVisible = thumb;
+          } else {
+            thumb.style.display = 'none';
+          }
+        });
+
+        var activeThumb = document.querySelector('.jm-pdp-gallery__thumb.is-active');
+        if (activeThumb && activeThumb.style.display === 'none' && firstVisible) {
+          firstVisible.click();
+        } else if (!activeThumb && firstVisible) {
+          firstVisible.click();
+        }
+
         var qtyInput = document.getElementById('pdp-qty');
         if (qtyInput) qtyInput.value = '1';
         document.querySelectorAll('.pdp-qty-input').forEach(function (input) {

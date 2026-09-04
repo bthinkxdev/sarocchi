@@ -44,8 +44,12 @@
     [data-formset="specifications"] tbody[data-formset-body] td.d-none,
     [data-formset="documents"] tbody[data-formset-body] td.d-none { display: none; }
     
-    [data-formset="images"] tbody[data-formset-body] td:nth-child(5),
-    [data-formset="images"] tbody[data-formset-body] td:nth-child(6) { width: 50%; }
+    [data-formset="images"] tbody[data-formset-body] td:nth-child(2) { width: 35%; }
+    [data-formset="images"] tbody[data-formset-body] td:nth-child(3) { width: 65%; }
+    [data-formset="images"] tbody[data-formset-body] td:nth-child(5) { width: 25%; }
+    [data-formset="images"] tbody[data-formset-body] td:nth-child(6) { width: 25%; }
+    [data-formset="images"] tbody[data-formset-body] td:nth-child(6) input[type="checkbox"] { margin-top: 8px; }
+    [data-formset="images"] tbody[data-formset-body] td:nth-child(7) { width: 50%; }
     
     [data-formset="images"] tbody[data-formset-body] td:last-child,
     [data-formset="videos"] tbody[data-formset-body] td:last-child,
@@ -79,9 +83,11 @@
     [data-formset="images"] tbody[data-formset-body] td:nth-child(4)::before { content: "Alt text"; }
     [data-formset="images"] tbody[data-formset-body] td:nth-child(5)::before { content: "Order"; }
     [data-formset="images"] tbody[data-formset-body] td:nth-child(6)::before { content: "Primary"; }
+    [data-formset="images"] tbody[data-formset-body] td:nth-child(7)::before { content: "Variant"; }
 
     [data-formset="videos"] tbody[data-formset-body] td:nth-child(2)::before { content: "Video File"; }
     [data-formset="videos"] tbody[data-formset-body] td:nth-child(3)::before { content: "Thumbnail"; }
+    [data-formset="videos"] tbody[data-formset-body] td:nth-child(4)::before { content: "Variant"; }
 
     [data-formset="specifications"] tbody[data-formset-body] td:nth-child(2)::before { content: "Specification Name"; }
     [data-formset="specifications"] tbody[data-formset-body] td:nth-child(3)::before { content: "Value"; }
@@ -166,6 +172,12 @@
   [data-formset="variants"] tbody[data-formset-body] td:nth-child(7)::before { content: "SKU Suffix"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
   [data-formset="variants"] tbody[data-formset-body] td:nth-child(8)::before { content: "Stock Quantity"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
   [data-formset="variants"] tbody[data-formset-body] td:nth-child(9)::before { content: "Low Stock Threshold"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+
+  @media (min-width: 992px) {
+    .repeater td input[type="file"] {
+      max-width: 180px;
+    }
+  }
 </style>
 <form method="post" enctype="multipart/form-data" novalidate>
   {% csrf_token %}
@@ -327,6 +339,7 @@
                   <th>Alt text</th>
                   <th>Order</th>
                   <th class="text-center">Primary</th>
+                  <th>Variant</th>
                   <th class="text-center">Remove</th>
                 </tr>
               </thead>
@@ -339,7 +352,7 @@
                       class="thumb" data-img-preview alt="">
                     {% else %}<img src="" class="thumb d-none" data-img-preview alt="">{% endif %}
                   </td>
-                  <td>
+                  <td style="max-width: 250px; overflow-wrap: break-word;">
                     {{ iform.image }}
                     {% if iform.image.errors %}<div class="text-danger small mt-1">{{ iform.image.errors|join:", " }}</div>{% endif %}
                   </td>
@@ -349,19 +362,22 @@
                   </td>
                   <td>
                     {{ iform.display_order }}
-                    {% if iform.display_order.errors %}<div class="text-danger small mt-1">{{ iform.display_order.errors|join:", " }}</div>{% endif %}
+                    {% if iform.display_order.errors %}<div class="text-danger small mt-1 text-center">{{ iform.display_order.errors|join:", " }}</div>{% endif %}
                   </td>
                   <td class="text-center">
                     {{ iform.is_primary }}
                     {% if iform.is_primary.errors %}<div class="text-danger small mt-1">{{ iform.is_primary.errors|join:", " }}</div>{% endif %}
                   </td>
+                  <td>
+                    {{ iform.variant }}
+                    {% if iform.variant.errors %}<div class="text-danger small mt-1">{{ iform.variant.errors|join:", " }}</div>{% endif %}
+                  </td>
                   <td class="text-center">
                     {% if iform.instance.pk %}
-                    <label class="form-check d-inline-flex m-0" title="Delete on save">{{ iform.DELETE }}</label>
-                    {% else %}
+                    <div class="d-none">{{ iform.DELETE }}</div>
+                    {% endif %}
                     <button type="button" class="btn btn-icon btn-sm btn-light text-danger" data-row-remove><i
                         class="ti ti-trash"></i></button>
-                    {% endif %}
                   </td>
                 </tr>
                 {% endfor %}
@@ -372,10 +388,11 @@
             <tr>
               <td class="d-none">{{ images.empty_form.id }}</td>
               <td><img src="" class="thumb d-none" data-img-preview alt=""></td>
-              <td>{{ images.empty_form.image }}</td>
+              <td style="max-width: 250px; overflow-wrap: break-word;">{{ images.empty_form.image }}</td>
               <td>{{ images.empty_form.alt_text }}</td>
               <td>{{ images.empty_form.display_order }}</td>
               <td class="text-center">{{ images.empty_form.is_primary }}</td>
+              <td>{{ images.empty_form.variant }}</td>
               <td class="text-center"><button type="button" class="btn btn-icon btn-sm btn-light text-danger"
                   data-row-remove><i class="ti ti-trash"></i></button></td>
             </tr>
@@ -404,6 +421,7 @@
                   <th class="d-none"></th>
                   <th>Video File</th>
                   <th>Thumbnail</th>
+                  <th>Variant</th>
                   <th class="text-center">Remove</th>
                 </tr>
               </thead>
@@ -419,13 +437,16 @@
                     {{ vform.thumbnail }}
                     {% if vform.thumbnail.errors %}<div class="text-danger small mt-1">{{ vform.thumbnail.errors|join:", " }}</div>{% endif %}
                   </td>
+                  <td>
+                    {{ vform.variant }}
+                    {% if vform.variant.errors %}<div class="text-danger small mt-1">{{ vform.variant.errors|join:", " }}</div>{% endif %}
+                  </td>
                   <td class="text-center">
                     {% if vform.instance.pk %}
-                    <label class="form-check d-inline-flex m-0" title="Delete on save">{{ vform.DELETE }}</label>
-                    {% else %}
+                    <div class="d-none">{{ vform.DELETE }}</div>
+                    {% endif %}
                     <button type="button" class="btn btn-icon btn-sm btn-light text-danger" data-row-remove><i
                         class="ti ti-trash"></i></button>
-                    {% endif %}
                   </td>
                 </tr>
                 {% endfor %}
@@ -437,6 +458,7 @@
               <td class="d-none">{{ videos.empty_form.id }}</td>
               <td>{{ videos.empty_form.video_file }}</td>
               <td>{{ videos.empty_form.thumbnail }}</td>
+              <td>{{ videos.empty_form.variant }}</td>
               <td class="text-center"><button type="button" class="btn btn-icon btn-sm btn-light text-danger"
                   data-row-remove><i class="ti ti-trash"></i></button></td>
             </tr>

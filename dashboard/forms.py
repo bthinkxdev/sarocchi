@@ -192,28 +192,72 @@ ProductVariantFormSet = forms.inlineformset_factory(
     can_delete=True,
 )
 
+class BaseProductMediaFormSet(forms.BaseInlineFormSet):
+    def _construct_form(self, i, **kwargs):
+        form = super()._construct_form(i, **kwargs)
+        if self.instance and self.instance.pk:
+            form.fields['variant'].queryset = ProductVariant.objects.filter(product=self.instance).order_by('name')
+        else:
+            form.fields['variant'].queryset = ProductVariant.objects.none()
+        form.fields['variant'].empty_label = "--All Variants"
+        form.fields['variant'].label_from_instance = lambda obj: obj.name
+        return form
+
+    @property
+    def empty_form(self):
+        return super().empty_form
+
 class ProductImageForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['variant'].empty_label = "--All Variants"
+        self.fields['variant'].label_from_instance = lambda obj: obj.name
+        self.fields['variant'].queryset = ProductVariant.objects.none()
+        
+        self.fields["display_order"].required = False
+        if self.empty_permitted:
+            self.initial["display_order"] = None
+
+    def clean_display_order(self):
+        val = self.cleaned_data.get("display_order")
+        return val if val is not None else 0
+
     class Meta:
         model = ProductImage
-        fields = ["image", "alt_text", "display_order", "is_primary"]
+        fields = ["image", "alt_text", "display_order", "is_primary", "variant"]
+        widgets = {
+            'alt_text': forms.TextInput(attrs={'class': 'form-control form-control-sm', 'style': 'width: 100%; min-width: 80px;', 'placeholder': 'Alt text'}),
+            'display_order': forms.NumberInput(attrs={'class': 'form-control form-control-sm text-center px-1', 'style': 'max-width: 60px; min-width: 60px; margin: 0 auto;'}),
+            'variant': forms.Select(attrs={'class': 'form-select form-select-sm', 'style': 'min-width: 130px; width: 100%;'}),
+        }
         error_messages = {
             "image": {"required": "Image file is required."},
             "alt_text": {"required": "Alt text is required."},
-            "display_order": {"required": "Display order is required."},
+            "display_order": {"required": "Required."},
         }
 
 ProductImageFormSet = forms.inlineformset_factory(
     Product,
     ProductImage,
     form=ProductImageForm,
+    formset=BaseProductMediaFormSet,
     extra=1,
     can_delete=True,
 )
 
 class ProductVideoForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['variant'].empty_label = "--All Variants"
+        self.fields['variant'].label_from_instance = lambda obj: obj.name
+        self.fields['variant'].queryset = ProductVariant.objects.none()
+
     class Meta:
         model = ProductVideo
-        fields = ["video_file", "thumbnail"]
+        fields = ["video_file", "thumbnail", "variant"]
+        widgets = {
+            'variant': forms.Select(attrs={'class': 'form-select form-select-sm', 'style': 'min-width: 130px; width: 100%;'}),
+        }
         error_messages = {
             "video_file": {"required": "Video file is required."},
         }
@@ -222,6 +266,7 @@ ProductVideoFormSet = forms.inlineformset_factory(
     Product,
     ProductVideo,
     form=ProductVideoForm,
+    formset=BaseProductMediaFormSet,
     extra=1,
     can_delete=True,
 )
