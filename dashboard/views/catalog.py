@@ -140,9 +140,9 @@ class ProductDeleteView(DashboardDeleteView):
 
 
 def _render_product_form(request, product, mode):
+    from catalog.models import ProductVariant, ProductAttribute, ProductAttributeValue
     if request.method == "POST":
         form = forms.ProductForm(request.POST, request.FILES, instance=product)
-        variants = forms.ProductVariantFormSet(request.POST, instance=product, prefix="variants")
         images = forms.ProductImageFormSet(
             request.POST, request.FILES, instance=product, prefix="images"
         )
@@ -154,30 +154,96 @@ def _render_product_form(request, product, mode):
         )
         if (
             form.is_valid()
-            and variants.is_valid()
             and images.is_valid()
             and videos.is_valid()
             and specifications.is_valid()
         ):
             product = form.save()
-            variants.instance = product
-            variants.save()
-
-            if product.variants.exists():
-                from django.db.models import Sum
-                first_variant = product.variants.order_by("id").first()
-                total_stock = product.variants.aggregate(total=Sum("stock_quantity"))["total"] or 0
+            
+            has_variants = request.POST.get("has_variants") == "on"
+            if has_variants:
+                product.variants.all().delete()
                 
+                v_sku_suffixes = request.POST.getlist("variant_sku_suffix[]")
+                v_stocks = request.POST.getlist("variant_stock_quantity[]")
+                v_low_stocks = request.POST.getlist("variant_low_stock_threshold[]")
+                v_base_prices = request.POST.getlist("variant_base_price[]")
+                v_mrps = request.POST.getlist("variant_mrp[]")
+                v_purchase_prices = request.POST.getlist("variant_purchase_price[]")
+                v_dynamic_attributes = request.POST.getlist("variant_dynamic_attributes[]")
+                
+                total_stock = 0
+                for i in range(len(v_sku_suffixes)):
+                    sku_suffix = v_sku_suffixes[i] if i < len(v_sku_suffixes) else ""
+                    stock = int(v_stocks[i]) if i < len(v_stocks) and v_stocks[i].isdigit() else 0
+                    low_stock = int(v_low_stocks[i]) if i < len(v_low_stocks) and v_low_stocks[i].isdigit() else 5
+                    base_price = float(v_base_prices[i]) if i < len(v_base_prices) and v_base_prices[i] else 0.0
+                    mrp = float(v_mrps[i]) if i < len(v_mrps) and v_mrps[i] else 0.0
+                    purchase_price = float(v_purchase_prices[i]) if i < len(v_purchase_prices) and v_purchase_prices[i] else 0.0
+                    dynamic_attrs_str = v_dynamic_attributes[i] if i < len(v_dynamic_attributes) else ""
+                    
+                    variant = ProductVariant.objects.create(
+                        product=product,
+                        sku_suffix=sku_suffix,
+                        stock_quantity=stock,
+                        low_stock_threshold=low_stock,
+                        base_price=base_price,
+                        mrp=mrp,
+                        purchase_price=purchase_price,
+                        display_order=i,
+                        name=f"{product.name} - {sku_suffix}" if sku_suffix else product.name
+                    )
+                    
+                    if dynamic_attrs_str:
+                        attr_val_ids = []
+                        for pair in dynamic_attrs_str.split("|"):
+                            if ":" in pair:
+                                attr_name, val_name = pair.split(":", 1)
+                                attr_name = attr_name.strip()
+                                val_name = val_name.strip()
+                                if attr_name and val_name:
+                                    attr_obj, _ = ProductAttribute.objects.get_or_create(name=attr_name)
+                                    val_obj, _ = ProductAttributeValue.objects.get_or_create(attribute=attr_obj, value=val_name)
+                                    attr_val_ids.append(val_obj.id)
+                        if attr_val_ids:
+                            variant.attribute_values.set(attr_val_ids)
+                            
+                    total_stock += stock
+                    
                 product.stock_quantity = total_stock
-                product.base_price = first_variant.base_price
-                product.mrp = first_variant.mrp
-                product.purchase_price = first_variant.purchase_price
+                if v_base_prices and v_base_prices[0]:
+                    product.base_price = float(v_base_prices[0])
+                    product.mrp = float(v_mrps[0]) if v_mrps[0] else 0.0
+                    product.purchase_price = float(v_purchase_prices[0]) if v_purchase_prices[0] else 0.0
                 product.save(update_fields=["stock_quantity", "base_price", "mrp", "purchase_price"])
+            else:
+                product.variants.all().delete()
 
-            images.instance = product
-            images.save()
-            videos.instance = product
-            videos.save()
+            def save_media_formset(formset):
+                formset.instance = product
+                instances = formset.save(commit=False)
+                
+                all_instances = list(instances)
+                for f in formset.initial_forms:
+                    if f not in formset.deleted_forms and f.instance not in all_instances:
+                        all_instances.append(f.instance)
+                        
+                for instance in all_instances:
+                    for f in formset.forms:
+                        if f.instance == instance:
+                            sku = f.cleaned_data.get('variant_sku')
+                            if sku:
+                                instance.variant = product.variants.filter(sku_suffix=sku).first()
+                            else:
+                                instance.variant = None
+                            break
+                    instance.save()
+                for obj in formset.deleted_objects:
+                    obj.delete()
+
+            save_media_formset(images)
+            save_media_formset(videos)
+            
             specifications.instance = product
             specifications.save()
             messages.success(request, f"Product '{product.name}' saved successfully.")
@@ -185,7 +251,6 @@ def _render_product_form(request, product, mode):
 
     else:
         form = forms.ProductForm(instance=product)
-        variants = forms.ProductVariantFormSet(instance=product, prefix="variants")
         images = forms.ProductImageFormSet(instance=product, prefix="images")
         videos = forms.ProductVideoFormSet(instance=product, prefix="videos")
         specifications = forms.ProductSpecificationFormSet(
@@ -194,8 +259,6 @@ def _render_product_form(request, product, mode):
 
     for f in [
         form,
-        *variants.forms,
-        variants.empty_form,
         *images.forms,
         images.empty_form,
         *videos.forms,
@@ -205,21 +268,96 @@ def _render_product_form(request, product, mode):
     ]:
         _style(f)
 
+    attributes = ProductAttribute.objects.prefetch_related("values").all()
+    existing_variants = []
+    has_existing_variants = False
+    dynamic_options = {}
+    
+    if request.method == "POST":
+        has_existing_variants = request.POST.get("has_variants") == "on"
+        if has_existing_variants:
+            v_sku_suffixes = request.POST.getlist("variant_sku_suffix[]")
+            v_stocks = request.POST.getlist("variant_stock_quantity[]")
+            v_low_stocks = request.POST.getlist("variant_low_stock_threshold[]")
+            v_base_prices = request.POST.getlist("variant_base_price[]")
+            v_mrps = request.POST.getlist("variant_mrp[]")
+            v_purchase_prices = request.POST.getlist("variant_purchase_price[]")
+            v_dynamic_attributes = request.POST.getlist("variant_dynamic_attributes[]")
+            
+            for i in range(len(v_sku_suffixes)):
+                dynamic_attrs_str = v_dynamic_attributes[i] if i < len(v_dynamic_attributes) else ""
+                name_parts = []
+                for pair in dynamic_attrs_str.split("|"):
+                    if ":" in pair:
+                        attr_name, val_name = pair.split(":", 1)
+                        attr_name = attr_name.strip()
+                        val_name = val_name.strip()
+                        name_parts.append(val_name)
+                        
+                        if attr_name not in dynamic_options:
+                            dynamic_options[attr_name] = []
+                        if val_name not in dynamic_options[attr_name]:
+                            dynamic_options[attr_name].append(val_name)
+                            
+                name = " - ".join(name_parts)
+                
+                existing_variants.append({
+                    "name": name,
+                    "sku_suffix": v_sku_suffixes[i] if i < len(v_sku_suffixes) else "",
+                    "stock_quantity": v_stocks[i] if i < len(v_stocks) else "0",
+                    "low_stock_threshold": v_low_stocks[i] if i < len(v_low_stocks) else "5",
+                    "base_price": v_base_prices[i] if i < len(v_base_prices) else "0.00",
+                    "mrp": v_mrps[i] if i < len(v_mrps) else "0.00",
+                    "purchase_price": v_purchase_prices[i] if i < len(v_purchase_prices) else "0.00",
+                    "post_attr_string": dynamic_attrs_str
+                })
+    else:
+        has_existing_variants = product.variants.exists() if product else False
+        if has_existing_variants:
+            for variant in product.variants.prefetch_related("attribute_values").all():
+                attr_str = "|".join([f"{av.attribute.name}:{av.value}" for av in variant.attribute_values.all()])
+                display_name = variant.name
+                prefix = f"{product.name} - "
+                if display_name.startswith(prefix):
+                    display_name = display_name[len(prefix):]
+                    
+                for av in variant.attribute_values.all():
+                    if av.attribute.name not in dynamic_options:
+                        dynamic_options[av.attribute.name] = []
+                    if av.value not in dynamic_options[av.attribute.name]:
+                        dynamic_options[av.attribute.name].append(av.value)
+                    
+                existing_variants.append({
+                    "name": display_name,
+                    "sku_suffix": variant.sku_suffix,
+                    "stock_quantity": variant.stock_quantity,
+                    "low_stock_threshold": variant.low_stock_threshold,
+                    "base_price": variant.base_price,
+                    "mrp": variant.mrp,
+                    "purchase_price": variant.purchase_price,
+                    "post_attr_string": attr_str
+                })
+
+    dynamic_options_list = [
+        {"name": k, "values": ", ".join(v)}
+        for k, v in dynamic_options.items()
+    ]
+
     context = {
         "nav_section": "products",
         "page_title": f"{'Add' if mode == 'create' else 'Edit'} Product",
         "form": form,
-        "variants": variants,
         "images": images,
         "videos": videos,
         "specifications": specifications,
         "form_mode": mode,
         "product": product,
+        "attributes": attributes,
+        "has_existing_variants": has_existing_variants,
+        "existing_variants": existing_variants,
+        "dynamic_options_list": dynamic_options_list,
         "cancel_url": reverse("dashboard:product-list"),
     }
-    
-    from catalog.models import ProductVariant
-    context["existing_variant_types"] = ProductVariant.objects.exclude(variant_type="").values_list("variant_type", flat=True).distinct()
     
     return render(request, "dashboard/catalog/product_form.html", context)
 

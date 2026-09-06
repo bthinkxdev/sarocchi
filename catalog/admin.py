@@ -8,6 +8,8 @@ from catalog.models import (
     Brand,
     Category,
     Product,
+    ProductAttribute,
+    ProductAttributeValue,
     ProductImage,
     ProductRelation,
     ProductVariant,
@@ -164,3 +166,16 @@ class ReviewPhotoAdmin(admin.ModelAdmin):
 
     list_display = ("review", "updated_at")
     list_select_related = ("review", "review__product")
+
+
+class ProductAttributeValueInline(admin.TabularInline):
+    model = ProductAttributeValue
+    extra = 1
+
+
+@admin.register(ProductAttribute)
+class ProductAttributeAdmin(admin.ModelAdmin):
+    """Admin for global product attributes."""
+    list_display = ("name", "created_at", "updated_at")
+    search_fields = ("name",)
+    inlines = [ProductAttributeValueInline]

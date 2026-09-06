@@ -23,6 +23,22 @@
           }
         });
 
+        if (!firstVisible) {
+          var main = document.getElementById('main-pdp-image');
+          var mainVideo = document.getElementById('main-pdp-video');
+          if (mainVideo) {
+            mainVideo.pause();
+            mainVideo.classList.add('d-none');
+          }
+          if (main) {
+            main.src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'%3E%3Crect width='100%25' height='100%25' fill='%23f1f5f9'/%3E%3C/svg%3E";
+            main.classList.remove('d-none');
+          }
+          document.querySelectorAll('.jm-pdp-gallery__thumb').forEach(function(t) {
+            t.classList.remove('active', 'is-active');
+          });
+        }
+
         var activeThumb = document.querySelector('.jm-pdp-gallery__thumb.is-active');
         if (activeThumb && activeThumb.style.display === 'none' && firstVisible) {
           firstVisible.click();

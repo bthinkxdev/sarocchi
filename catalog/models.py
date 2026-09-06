@@ -327,6 +327,44 @@ class Product(TimeStampedModel):
         return json.dumps(data)
 
 
+class ProductAttribute(TimeStampedModel):
+    """Global product attribute definition (e.g., Color, Size)."""
+    name = models.CharField(max_length=120, unique=True, verbose_name="Name")
+
+    class Meta:
+        verbose_name = "Product attribute"
+        verbose_name_plural = "Product attributes"
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class ProductAttributeValue(TimeStampedModel):
+    """Specific value for a product attribute (e.g., Red, XL)."""
+    attribute = models.ForeignKey(
+        ProductAttribute,
+        on_delete=models.CASCADE,
+        related_name="values",
+        verbose_name="Attribute",
+    )
+    value = models.CharField(max_length=120, verbose_name="Value")
+    display_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Display order",
+        help_text="Lower values appear first.",
+    )
+
+    class Meta:
+        verbose_name = "Product attribute value"
+        verbose_name_plural = "Product attribute values"
+        ordering = ["attribute__name", "display_order", "value"]
+        unique_together = [("attribute", "value")]
+
+    def __str__(self) -> str:
+        return f"{self.attribute.name}: {self.value}"
+
+
 class VariantType(models.TextChoices):
     """Allowed product variant dimensions."""
 
@@ -345,9 +383,20 @@ class ProductVariant(TimeStampedModel):
     )
     variant_type = models.CharField(
         max_length=50,
+        blank=True,
         verbose_name="Variant type",
     )
-    name = models.CharField(max_length=120, verbose_name="Variant Name")
+    name = models.CharField(max_length=120, blank=True, verbose_name="Variant Name")
+    attribute_values = models.ManyToManyField(
+        ProductAttributeValue,
+        blank=True,
+        related_name="variants",
+        verbose_name="Attribute values",
+    )
+    display_order = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Display order",
+    )
     base_price = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -384,7 +433,7 @@ class ProductVariant(TimeStampedModel):
     class Meta:
         verbose_name = "Product variant"
         verbose_name_plural = "Product variants"
-        unique_together = [("product", "variant_type", "name")]
+        ordering = ["display_order", "id"]
 
     def __str__(self) -> str:
         return f"{self.product.sku}-{self.sku_suffix}"

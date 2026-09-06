@@ -178,6 +178,21 @@
       max-width: 180px;
     }
   }
+
+  @media (max-width: 991.98px) {
+    #variants_table td:last-child {
+      display: none !important;
+    }
+    
+    #variants_table td[data-label]::before {
+      flex: 0 0 40%;
+      max-width: 40%;
+    }
+    #variants_table td[data-label] input {
+      flex: 1;
+      max-width: 60%;
+    }
+  }
 </style>
 <form method="post" enctype="multipart/form-data" novalidate>
   {% csrf_token %}
@@ -205,113 +220,97 @@
         </div>
       </div>
 
-      <div class="card mb-3" data-formset="variants">
-        <div class="card-header panel-header">
+      <div class="card mb-3" id="variants-section">
+        <div class="card-header panel-header d-flex justify-content-between align-items-center">
           <div>
             <h3 class="panel-title">Variants</h3>
-            <p class="panel-sub">Size or packaging options with their own price &amp; stock</p>
+            <p class="panel-sub">Generate variants dynamically using product attributes</p>
           </div>
-          <button type="button" class="btn btn-sm btn-outline-primary" data-formset-add><i
-              class="ti ti-plus me-1"></i>Add variant</button>
+          <div class="form-check form-switch d-flex align-items-center m-0">
+            <input class="form-check-input m-0" type="checkbox" id="has_variants_toggle" name="has_variants" {% if has_existing_variants %}checked{% endif %} style="cursor:pointer; width: 2.5em; height: 1.25em;">
+            <label class="form-check-label fs-6 ms-3 mb-0" for="has_variants_toggle" style="cursor:pointer; font-weight:500;">Has Variants</label>
+          </div>
         </div>
-        <div class="card-body p-0">
-          {{ variants.management_form }}
-          {% if variants.non_form_errors %}
-          <div class="alert alert-danger mx-3 mt-3 mb-0">{{ variants.non_form_errors|join:", " }}</div>
-          {% endif %}
-          <datalist id="variant-type-list">
-            {% for vtype in existing_variant_types %}
-            <option value="{{ vtype }}">{{ vtype }}</option>
-            {% endfor %}
-          </datalist>
+        
+        <div class="card-body" id="variants_body" style="{% if not has_existing_variants %}display: none;{% endif %}">
+          <div class="mb-4">
+            <h5 class="mb-3">Define Options</h5>
+            <datalist id="global-attr-list">
+              {% for attr in attributes %}
+              <option value="{{ attr.name }}">
+              {% endfor %}
+            </datalist>
+            <div id="dynamic-attributes-container">
+              {% for opt in dynamic_options_list %}
+              <div class="row gx-2 mb-2 align-items-center attr-dynamic-row">
+                <div class="col-12 col-md-3 mb-2 mb-md-0">
+                  <input type="text" class="form-control attr-name-input" placeholder="e.g. Size, Color, Material" list="global-attr-list" value="{{ opt.name }}">
+                </div>
+                <div class="col-10 col-md-8">
+                  <input type="text" class="form-control attr-values-input" placeholder="e.g. S, M, L (comma separated)" value="{{ opt.values }}">
+                </div>
+                <div class="col-2 col-md-1 text-end">
+                  <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-attr-row-btn w-100"><i class="ti ti-trash"></i></button>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="add_dynamic_attr_btn">
+              <i class="ti ti-plus"></i> Add option like size or color
+            </button>
+            <hr>
+            <button type="button" class="btn btn-primary btn-sm mt-2" id="generate_variants_btn">Generate Variants</button>
+          </div>
+
           <div class="table-responsive">
-            <table class="table repeater align-middle mb-0">
+            <table class="table align-middle mb-0" id="variants_table">
               <thead>
                 <tr>
-                  <th class="d-none"></th>
-                  <th>Type</th>
-                  <th>Name</th>
-                  <th>Base Price</th>
-                  <th>MRP</th>
-                  <th>Purchase Price</th>
-                  <th>SKU suffix</th>
-                  <th>Stock</th>
-                  <th>Threshold</th>
-                  <th class="text-center">Remove</th>
+                  <th style="width: 18%;">Variant Name</th>
+                  <th style="width: 12%;">Base Price</th>
+                  <th style="width: 12%;">MRP</th>
+                  <th style="width: 13%;">Purchase Price</th>
+                  <th style="width: 15%;">SKU suffix</th>
+                  <th style="width: 11%;">Stock</th>
+                  <th style="width: 12%;">Threshold</th>
+                  <th class="text-center" style="width: 7%;">Remove</th>
                 </tr>
               </thead>
-              <tbody data-formset-body>
-                {% for vform in variants %}
+              <tbody id="variants_tbody">
+                {% for variant in existing_variants %}
                 <tr>
-                  <td class="d-none">
-                    {% for hidden in vform.hidden_fields %}
-                      {{ hidden }}
-                    {% endfor %}
+                  <td class="position-relative">
+                    <strong>{{ variant.name }}</strong>
+                    <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn d-md-none position-absolute end-0 top-50 translate-middle-y me-3"><i class="ti ti-trash"></i></button>
+                    <!-- Pass original attribute strings to backend to preserve them on reload -->
+                    <input type="hidden" name="variant_dynamic_attributes[]" value="{{ variant.post_attr_string }}">
                   </td>
-                  <td>
-                    {{ vform.variant_type }}
-                    {% if vform.variant_type.errors %}<div class="text-danger small mt-1">{{ vform.variant_type.errors|join:", " }}</div>{% endif %}
+                  <td data-label="Base Price">
+                    <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_base_price[]" value="{{ variant.base_price }}">
                   </td>
-                  <td>
-                    {{ vform.name }}
-                    {% if vform.name.errors %}<div class="text-danger small mt-1">{{ vform.name.errors|join:", " }}</div>{% endif %}
+                  <td data-label="MRP">
+                    <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_mrp[]" value="{{ variant.mrp }}">
                   </td>
-                  <td>
-                    {{ vform.base_price }}
-                    {% if vform.base_price.errors %}<div class="text-danger small mt-1">{{ vform.base_price.errors|join:", " }}</div>{% endif %}
+                  <td data-label="Purchase Price">
+                    <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="{{ variant.purchase_price }}">
                   </td>
-                  <td>
-                    {{ vform.mrp }}
-                    {% if vform.mrp.errors %}<div class="text-danger small mt-1">{{ vform.mrp.errors|join:", " }}</div>{% endif %}
+                  <td data-label="SKU Suffix">
+                    <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="{{ variant.sku_suffix }}">
                   </td>
-                  <td>
-                    {{ vform.purchase_price }}
-                    {% if vform.purchase_price.errors %}<div class="text-danger small mt-1">{{ vform.purchase_price.errors|join:", " }}</div>{% endif %}
+                  <td data-label="Stock">
+                    <input type="number" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="{{ variant.stock_quantity }}">
                   </td>
-                  <td>
-                    {{ vform.sku_suffix }}
-                    {% if vform.sku_suffix.errors %}<div class="text-danger small mt-1">{{ vform.sku_suffix.errors|join:", " }}</div>{% endif %}
+                  <td data-label="Threshold">
+                    <input type="number" class="form-control form-control-sm w-100" name="variant_low_stock_threshold[]" value="{{ variant.low_stock_threshold }}">
                   </td>
-                  <td>
-                    {{ vform.stock_quantity }}
-                    {% if vform.stock_quantity.errors %}<div class="text-danger small mt-1">{{ vform.stock_quantity.errors|join:", " }}</div>{% endif %}
-                  </td>
-                  <td>
-                    {{ vform.low_stock_threshold }}
-                    {% if vform.low_stock_threshold.errors %}<div class="text-danger small mt-1">{{ vform.low_stock_threshold.errors|join:", " }}</div>{% endif %}
-                  </td>
-                  <td class="text-center">
-                    {% if vform.instance.pk %}
-                    <div class="d-none">{{ vform.DELETE }}</div>
-                    {% endif %}
-                    <button type="button" class="btn btn-icon btn-sm btn-light text-danger" data-row-remove title="Remove Variant">
-                      <i class="ti ti-trash"></i>
-                    </button>
+                  <td class="d-none d-md-table-cell text-center">
+                    <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn mt-2 mt-md-0 w-100 w-md-auto"><i class="ti ti-trash"></i></button>
                   </td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
-          <template data-formset-empty>
-            <tr>
-              <td class="d-none">
-                {% for hidden in variants.empty_form.hidden_fields %}
-                  {{ hidden }}
-                {% endfor %}
-              </td>
-              <td>{{ variants.empty_form.variant_type }}</td>
-              <td>{{ variants.empty_form.name }}</td>
-              <td>{{ variants.empty_form.base_price }}</td>
-              <td>{{ variants.empty_form.mrp }}</td>
-              <td>{{ variants.empty_form.purchase_price }}</td>
-              <td>{{ variants.empty_form.sku_suffix }}</td>
-              <td>{{ variants.empty_form.stock_quantity }}</td>
-              <td>{{ variants.empty_form.low_stock_threshold }}</td>
-              <td class="text-center"><button type="button" class="btn btn-icon btn-sm btn-light text-danger"
-                  data-row-remove><i class="ti ti-trash"></i></button></td>
-            </tr>
-          </template>
         </div>
       </div>
 
@@ -369,8 +368,8 @@
                     {% if iform.is_primary.errors %}<div class="text-danger small mt-1">{{ iform.is_primary.errors|join:", " }}</div>{% endif %}
                   </td>
                   <td>
-                    {{ iform.variant }}
-                    {% if iform.variant.errors %}<div class="text-danger small mt-1">{{ iform.variant.errors|join:", " }}</div>{% endif %}
+                    {{ iform.variant_sku }}
+                    {% if iform.variant_sku.errors %}<div class="text-danger small mt-1">{{ iform.variant_sku.errors|join:", " }}</div>{% endif %}
                   </td>
                   <td class="text-center">
                     {% if iform.instance.pk %}
@@ -392,7 +391,7 @@
               <td>{{ images.empty_form.alt_text }}</td>
               <td>{{ images.empty_form.display_order }}</td>
               <td class="text-center">{{ images.empty_form.is_primary }}</td>
-              <td>{{ images.empty_form.variant }}</td>
+              <td>{{ images.empty_form.variant_sku }}</td>
               <td class="text-center"><button type="button" class="btn btn-icon btn-sm btn-light text-danger"
                   data-row-remove><i class="ti ti-trash"></i></button></td>
             </tr>
@@ -438,8 +437,8 @@
                     {% if vform.thumbnail.errors %}<div class="text-danger small mt-1">{{ vform.thumbnail.errors|join:", " }}</div>{% endif %}
                   </td>
                   <td>
-                    {{ vform.variant }}
-                    {% if vform.variant.errors %}<div class="text-danger small mt-1">{{ vform.variant.errors|join:", " }}</div>{% endif %}
+                    {{ vform.variant_sku }}
+                    {% if vform.variant_sku.errors %}<div class="text-danger small mt-1">{{ vform.variant_sku.errors|join:", " }}</div>{% endif %}
                   </td>
                   <td class="text-center">
                     {% if vform.instance.pk %}
@@ -458,7 +457,7 @@
               <td class="d-none">{{ videos.empty_form.id }}</td>
               <td>{{ videos.empty_form.video_file }}</td>
               <td>{{ videos.empty_form.thumbnail }}</td>
-              <td>{{ videos.empty_form.variant }}</td>
+              <td>{{ videos.empty_form.variant_sku }}</td>
               <td class="text-center"><button type="button" class="btn btn-icon btn-sm btn-light text-danger"
                   data-row-remove><i class="ti ti-trash"></i></button></td>
             </tr>
@@ -583,6 +582,16 @@
           </div>
         </div>
 
+        <div class="card mb-3" id="main-inventory-card">
+          <div class="card-header panel-header">
+            <h3 class="panel-title">Inventory</h3>
+          </div>
+          <div class="card-body">
+            {% include "dashboard/partials/_field.html" with field=form.stock_quantity %}
+            {% include "dashboard/partials/_field.html" with field=form.low_stock_threshold %}
+          </div>
+        </div>
+
         <div class="card mb-3">
           <div class="card-header panel-header">
             <h3 class="panel-title">Search engine listing</h3>
@@ -594,16 +603,6 @@
           </div>
         </div>
 
-        <div class="card mb-3" id="main-inventory-card">
-          <div class="card-header panel-header">
-            <h3 class="panel-title">Inventory</h3>
-          </div>
-          <div class="card-body">
-            {% include "dashboard/partials/_field.html" with field=form.stock_quantity %}
-            {% include "dashboard/partials/_field.html" with field=form.low_stock_threshold %}
-          </div>
-        </div>
-
       </div>
     </div>
   </div>
@@ -611,17 +610,13 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+  const toggle = document.getElementById('has_variants_toggle');
+  const variantsBody = document.getElementById('variants_body');
+  
   function updateProductFieldsVisibility() {
-    const variantRows = document.querySelectorAll('#variant-select-group tr, tbody[data-formset-body] tr');
-    let hasVariants = false;
-    
-    // check if any variant row is active
-    document.querySelectorAll('tbody[data-formset-body] tr').forEach(row => {
-      const delCheckbox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
-      if (row.style.display !== 'none' && (!delCheckbox || !delCheckbox.checked)) {
-        hasVariants = true;
-      }
-    });
+    if (!toggle) return;
+    const hasVariants = toggle.checked;
+    variantsBody.style.display = hasVariants ? 'block' : 'none';
 
     const basePriceInput = document.getElementById('id_base_price');
     const mrpInput = document.getElementById('id_mrp');
@@ -640,7 +635,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (purchasePriceCol) purchasePriceCol.style.display = 'none';
       if (inventoryCard) inventoryCard.style.display = 'none';
       
-      // remove required attributes 
+      // remove required attributes
       if (basePriceInput) basePriceInput.required = false;
       if (mrpInput) mrpInput.required = false;
       if (purchasePriceInput) purchasePriceInput.required = false;
@@ -660,11 +655,158 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  updateProductFieldsVisibility();
+  if (toggle) {
+    toggle.addEventListener('change', updateProductFieldsVisibility);
+    updateProductFieldsVisibility();
+  }
+
+  const cartesian = (...a) => a.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())));
+
+  const addAttrBtn = document.getElementById('add_dynamic_attr_btn');
+  const attrContainer = document.getElementById('dynamic-attributes-container');
+
+  if (addAttrBtn) {
+    addAttrBtn.addEventListener('click', function() {
+      const row = document.createElement('div');
+      row.className = 'row gx-2 mb-2 align-items-center attr-dynamic-row';
+      row.innerHTML = `
+        <div class="col-12 col-md-3 mb-2 mb-md-0">
+          <input type="text" class="form-control attr-name-input" placeholder="e.g. Size, Color, Material" list="global-attr-list">
+        </div>
+        <div class="col-10 col-md-8">
+          <input type="text" class="form-control attr-values-input" placeholder="e.g. S, M, L (comma separated)">
+        </div>
+        <div class="col-2 col-md-1 text-end">
+          <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-attr-row-btn w-100"><i class="ti ti-trash"></i></button>
+        </div>
+      `;
+      attrContainer.appendChild(row);
+    });
+  }
+
+  if (attrContainer) {
+    attrContainer.addEventListener('click', function(e) {
+      if (e.target.closest('.remove-attr-row-btn')) {
+        e.target.closest('.attr-dynamic-row').remove();
+      }
+    });
+  }
+
+  const generateBtn = document.getElementById('generate_variants_btn');
+  if (generateBtn) {
+    generateBtn.addEventListener('click', function() {
+      const rows = document.querySelectorAll('.attr-dynamic-row');
+      if (rows.length === 0) {
+        alert("Please add at least one attribute to generate variants.");
+        return;
+      }
+
+      const groups = [];
+      rows.forEach(row => {
+        const name = row.querySelector('.attr-name-input').value.trim();
+        const valsStr = row.querySelector('.attr-values-input').value.trim();
+        if (name && valsStr) {
+          const vals = valsStr.split(',').map(v => v.trim()).filter(v => v);
+          if (vals.length > 0) {
+            groups.push(vals.map(v => ({ attrName: name, valName: v })));
+          }
+        }
+      });
+
+      if (groups.length === 0) {
+        alert("Please fill out the attribute names and values properly.");
+        return;
+      }
+
+      let combinations = [];
+      if (groups.length === 1) {
+        combinations = groups[0].map(item => [item]);
+      } else {
+        combinations = cartesian(...groups);
+      }
+
+      const tbody = document.getElementById('variants_tbody');
+      tbody.innerHTML = ''; // clear existing
+
+      combinations.forEach(combo => {
+        const nameParts = combo.map(c => c.valName);
+        const name = nameParts.join(' - ');
+        const attrStrings = combo.map(c => `${c.attrName}:${c.valName}`).join('|');
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="position-relative">
+            <strong>${name}</strong>
+            <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn d-md-none position-absolute end-0 top-50 translate-middle-y me-3"><i class="ti ti-trash"></i></button>
+            <input type="hidden" name="variant_dynamic_attributes[]" value="${attrStrings}">
+          </td>
+          <td data-label="Base Price">
+            <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_base_price[]" value="" required>
+          </td>
+          <td data-label="MRP">
+            <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_mrp[]" value="" required>
+          </td>
+          <td data-label="Purchase Price">
+            <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="" required>
+          </td>
+          <td data-label="SKU Suffix">
+            <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="${nameParts.join('-').replace(/\s+/g, '')}" required>
+          </td>
+          <td data-label="Stock">
+            <input type="number" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="0" required>
+          </td>
+          <td data-label="Threshold">
+            <input type="number" class="form-control form-control-sm w-100" name="variant_low_stock_threshold[]" value="5" required>
+          </td>
+          <td class="d-none d-md-table-cell text-center">
+            <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn mt-2 mt-md-0 w-100 w-md-auto"><i class="ti ti-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      
+      const generatedVariants = combinations.map(combo => {
+        const nameParts = combo.map(c => c.valName);
+        return {
+          name: nameParts.join(' - '),
+          sku_suffix: nameParts.join('-').replace(/\s+/g, '')
+        };
+      });
+      
+      function updateSelectOptions(select, variants) {
+        const firstOption = select.options.length > 0 ? select.options[0].outerHTML : '<option value="">---------</option>';
+        select.innerHTML = firstOption;
+        variants.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v.sku_suffix;
+          opt.textContent = v.name;
+          select.appendChild(opt);
+        });
+      }
+
+      document.querySelectorAll('select[name$="-variant_sku"]').forEach(select => {
+        updateSelectOptions(select, generatedVariants);
+      });
+
+      document.querySelectorAll('template[data-formset-empty]').forEach(template => {
+        template.content.querySelectorAll('select[name$="-variant_sku"]').forEach(select => {
+          updateSelectOptions(select, generatedVariants);
+        });
+      });
+    });
+  }
+
+  const tbody = document.getElementById('variants_tbody');
+  if (tbody) {
+    tbody.addEventListener('click', function(e) {
+      if (e.target.closest('.remove-variant-btn')) {
+        e.target.closest('tr').remove();
+      }
+    });
+  }
 
   document.addEventListener('click', function(e) {
     if (e.target.closest('[data-formset-add]') || e.target.closest('[data-row-remove]') || e.target.closest('input[type="checkbox"][name$="-DELETE"]')) {
-      setTimeout(updateProductFieldsVisibility, 50);
     }
   });
 });
