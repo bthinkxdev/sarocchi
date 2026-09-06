@@ -1,5 +1,20 @@
 {% extends "dashboard/base.html" %}
 
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<style>
+  .select2-container--bootstrap-5 .select2-selection {
+    border-color: #e4e7ec !important;
+    border-radius: 10px !important;
+  }
+  .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+    border-color: #f15a24 !important; 
+    box-shadow: 0 0 0 0.25rem rgba(241, 90, 36, 0.25) !important;
+  }
+</style>
+{% endblock %}
+
 {% block title %}{% if form_mode == "edit" %}Edit{% else %}Add{% endif %} Product{% endblock %}
 {% block page_title %}{% if form_mode == "edit" %}Edit Product{% else %}Add Product{% endif %}{% endblock %}
 {% block breadcrumbs %}<p class="mb-0 text-secondary">{% if form_mode == "edit" %}Update product details, variants and
@@ -216,6 +231,9 @@
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.mrp %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.purchase_price %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.color %}</div>
+            <div class="col-md-4 mt-3">{% include "dashboard/partials/_field.html" with field=form.collections %}</div>
+            <div class="col-md-4 mt-3">{% include "dashboard/partials/_field.html" with field=form.tags %}</div>
+            <div class="col-md-4 mt-3">{% include "dashboard/partials/_field.html" with field=form.labels %}</div>
           </div>
         </div>
       </div>
@@ -660,6 +678,42 @@ document.addEventListener("DOMContentLoaded", function() {
     updateProductFieldsVisibility();
   }
 
+  // initialize Select2
+  $('select[name="collections"]').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Select collections...',
+    allowClear: true,
+    width: '100%'
+  });
+
+  // initialize Select2 with dynamic creation for Tags and Labels
+  $('select[name="tags"]').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Select or type new tags...',
+    tags: true,
+    allowClear: true,
+    width: '100%'
+  });
+
+  $('select[name="labels"]').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Select or type new labels...',
+    tags: true,
+    allowClear: true,
+    width: '100%'
+  });
+
+  // forcefully clear the values when the clear button is clicked and prevent dropdown from opening
+  $('select[name="collections"], select[name="tags"], select[name="labels"]').on('select2:clear', function (e) {
+    $(this).val(null).trigger('change');
+    $(this).data('clearing', true);
+  }).on('select2:opening', function (e) {
+    if ($(this).data('clearing')) {
+        $(this).removeData('clearing');
+        e.preventDefault();
+    }
+  });
+
   const cartesian = (...a) => a.reduce((a, b) => a.flatMap(d => b.map(e => [d, e].flat())));
 
   const addAttrBtn = document.getElementById('add_dynamic_attr_btn');
@@ -811,4 +865,9 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 });
 </script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 {% endblock %}

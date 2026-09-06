@@ -48,6 +48,7 @@ def build_section_context(
         "instagram_gallery": _instagram,
         "newsletter": _newsletter,
         "category_products": _category_products,
+        "featured_collections": _featured_collections,
     }
     builder = builders.get(section_type, _empty)
     if section_type in ("featured_products", "best_sellers", "new_arrivals"):
@@ -170,3 +171,17 @@ def _newsletter(config: dict[str, Any]) -> dict[str, Any]:
 
 def _empty(config: dict[str, Any]) -> dict[str, Any]:
     return {}
+
+
+def _featured_collections(config: dict[str, Any]) -> dict[str, Any]:
+    from catalog.models import Collection
+    
+    slugs = config.get("collection_slugs", [])
+    if slugs:
+        if isinstance(slugs, str):
+            slugs = [s.strip() for s in slugs.split(",") if s.strip()]
+        collections = Collection.objects.filter(slug__in=slugs, is_active=True).prefetch_related("products")
+    else:
+        collections = Collection.objects.filter(is_active=True).prefetch_related("products")
+        
+    return {"collections": collections}

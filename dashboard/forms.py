@@ -16,6 +16,7 @@ from catalog.models import (
     ProductVariant,
     Review,
     SizeChart,
+    Collection,
 )
 from cms.models import BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument
 from core.models import SiteSettings, Currency
@@ -60,6 +61,9 @@ class ProductForm(SlugAutoMixin):
             "is_featured",
             "is_bestseller",
             "is_new_arrival",
+            "collections",
+            "tags",
+            "labels",
             "meta_title",
             "meta_description",
             "og_image",
@@ -92,6 +96,13 @@ class ProductForm(SlugAutoMixin):
         self.fields["purchase_price"].required = False
         self.fields["stock_quantity"].required = False
         self.fields["low_stock_threshold"].required = False
+        self.fields["collections"].required = False
+        self.fields["tags"].required = False
+        self.fields["labels"].required = False
+        
+        self.fields["collections"].widget.attrs["class"] = "form-select form-control"
+        self.fields["tags"].widget.attrs["class"] = "form-select form-control"
+        self.fields["labels"].widget.attrs["class"] = "form-select form-control"
 
     def clean(self):
         cleaned = super().clean()
@@ -119,6 +130,21 @@ class CategoryForm(SlugAutoMixin):
         super().__init__(*args, **kwargs)
         self.fields["slug"].required = False
 
+
+class CollectionForm(SlugAutoMixin):
+    class Meta:
+        model = Collection
+        fields = [
+            "name",
+            "slug",
+            "description",
+            "image",
+            "is_active",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["slug"].required = False
 
 
 class BrandForm(SlugAutoMixin):

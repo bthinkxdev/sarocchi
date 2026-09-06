@@ -38,6 +38,12 @@
       </a>
     </li>
     <li>
+      <a class="nav-link {% if nav_section == 'collections' %}active{% endif %}"
+        href="{% url 'dashboard:collection-list' %}">
+        <i class="ti ti-layers-intersect"></i><span class="nav-text">Collections</span>
+      </a>
+    </li>
+    <li>
       <a class="nav-link {% if nav_section == 'size_charts' %}active{% endif %}"
         href="{% url 'dashboard:sizechart-list' %}">
         <i class="ti ti-ruler-measure"></i><span class="nav-text">Size Charts</span>

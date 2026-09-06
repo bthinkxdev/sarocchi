@@ -18,6 +18,9 @@ from catalog.models import (
     ReviewPhoto,
     ProductSpecification,
     ProductDocument,
+    ProductTag,
+    ProductLabel,
+    Collection,
 )
 
 
@@ -40,6 +43,27 @@ class BrandAdmin(admin.ModelAdmin):
 
     list_display = ("name", "slug", "is_featured", "updated_at")
     list_filter = ("is_featured",)
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(ProductTag)
+class ProductTagAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(ProductLabel)
+class ProductLabelAdmin(admin.ModelAdmin):
+    list_display = ("name", "color")
+    search_fields = ("name",)
+
+
+@admin.register(Collection)
+class CollectionAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "is_active", "updated_at")
+    list_filter = ("is_active",)
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
 
@@ -96,6 +120,7 @@ class ProductAdmin(admin.ModelAdmin):
         ProductSpecificationInline,
         ProductDocumentInline,
     ]
+    filter_horizontal = ("tags", "labels", "collections")
     ordering = ("name",)
 
 

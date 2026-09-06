@@ -136,6 +136,62 @@ class SizeChart(TimeStampedModel):
     def __str__(self) -> str:
         return self.name
 
+class ProductTag(TimeStampedModel):
+    """Descriptive tag for a product (e.g., 'summer', 'cotton')."""
+
+    name = models.CharField(max_length=50, unique=True, verbose_name="Name")
+    slug = models.SlugField(max_length=50, unique=True, db_index=True, verbose_name="Slug")
+
+    class Meta:
+        verbose_name = "Product Tag"
+        verbose_name_plural = "Product Tags"
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class ProductLabel(TimeStampedModel):
+    """Visual badge for product cards (e.g., 'Sale', 'New', 'Selling Fast')."""
+
+    name = models.CharField(max_length=50, unique=True, verbose_name="Name")
+    color = models.CharField(
+        max_length=20, 
+        default="#000000", 
+        verbose_name="Color",
+        help_text="Hex color code (e.g., #FF0000 for red) or valid CSS color."
+    )
+
+    class Meta:
+        verbose_name = "Product Label"
+        verbose_name_plural = "Product Labels"
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Collection(TimeStampedModel):
+    """Thematic grouping of products (e.g., 'Bridal Collection', 'Summer Sale')."""
+
+    name = models.CharField(max_length=120, verbose_name="Name")
+    slug = models.SlugField(max_length=120, unique=True, db_index=True, verbose_name="Slug")
+    description = models.TextField(blank=True, verbose_name="Description")
+    image = models.ImageField(upload_to="collections/", blank=True, verbose_name="Image")
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        verbose_name="Is active",
+        help_text="When False, collection is hidden from the storefront.",
+    )
+
+    class Meta:
+        verbose_name = "Collection"
+        verbose_name_plural = "Collections"
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class Product(TimeStampedModel):
@@ -176,6 +232,24 @@ class Product(TimeStampedModel):
         blank=True,
         related_name="products",
         verbose_name="Size Chart",
+    )
+    tags = models.ManyToManyField(
+        ProductTag,
+        blank=True,
+        related_name="products",
+        verbose_name="Tags",
+    )
+    labels = models.ManyToManyField(
+        ProductLabel,
+        blank=True,
+        related_name="products",
+        verbose_name="Labels",
+    )
+    collections = models.ManyToManyField(
+        Collection,
+        blank=True,
+        related_name="products",
+        verbose_name="Collections",
     )
     base_price = models.DecimalField(
         max_digits=12,

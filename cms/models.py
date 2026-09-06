@@ -24,6 +24,7 @@ class HomepageSectionType(models.TextChoices):
     INSTAGRAM_GALLERY = "instagram_gallery", "Instagram Gallery"
     NEWSLETTER = "newsletter", "Newsletter"
     CATEGORY_PRODUCTS = "category_products", "Category Product Grids"
+    FEATURED_COLLECTIONS = "featured_collections", "Featured Collections"
 
 
 class PublishableModel(models.Model):

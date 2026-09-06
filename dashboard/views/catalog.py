@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from catalog.models import Brand, Category, Product, Review, HomePageProduct, SizeChart
+from catalog.models import Brand, Category, Product, Review, HomePageProduct, SizeChart, Collection
 from core.models import Currency
 from dashboard import forms
 from dashboard.access import dashboard_required
@@ -140,17 +140,53 @@ class ProductDeleteView(DashboardDeleteView):
 
 
 def _render_product_form(request, product, mode):
-    from catalog.models import ProductVariant, ProductAttribute, ProductAttributeValue
+    from catalog.models import ProductVariant, ProductAttribute, ProductAttributeValue, ProductTag, ProductLabel
+    from django.utils.text import slugify
     if request.method == "POST":
-        form = forms.ProductForm(request.POST, request.FILES, instance=product)
+        post_data = request.POST.copy()
+        
+        # handle dynamically created tags
+        tag_values = post_data.getlist("tags")
+        new_tag_ids = []
+        for val in tag_values:
+            if val and not val.isdigit():
+                tag_name = val.strip()
+                tag = ProductTag.objects.filter(name__iexact=tag_name).first()
+                if not tag:
+                    base_slug = slugify(tag_name) or "tag"
+                    unique_slug = base_slug
+                    counter = 1
+                    while ProductTag.objects.filter(slug=unique_slug).exists():
+                        unique_slug = f"{base_slug}-{counter}"
+                        counter += 1
+                    tag = ProductTag.objects.create(name=tag_name, slug=unique_slug)
+                new_tag_ids.append(str(tag.id))
+            elif val:
+                new_tag_ids.append(val)
+        if tag_values:
+            post_data.setlist("tags", new_tag_ids)
+            
+        # handle dynamically created labels
+        label_values = post_data.getlist("labels")
+        new_label_ids = []
+        for val in label_values:
+            if val and not val.isdigit():
+                label, _ = ProductLabel.objects.get_or_create(name=val.strip(), defaults={"color": "#000000"})
+                new_label_ids.append(str(label.id))
+            elif val:
+                new_label_ids.append(val)
+        if label_values:
+            post_data.setlist("labels", new_label_ids)
+
+        form = forms.ProductForm(post_data, request.FILES, instance=product)
         images = forms.ProductImageFormSet(
-            request.POST, request.FILES, instance=product, prefix="images"
+            post_data, request.FILES, instance=product, prefix="images"
         )
         videos = forms.ProductVideoFormSet(
-            request.POST, request.FILES, instance=product, prefix="videos"
+            post_data, request.FILES, instance=product, prefix="videos"
         )
         specifications = forms.ProductSpecificationFormSet(
-            request.POST, instance=product, prefix="specifications"
+            post_data, instance=product, prefix="specifications"
         )
         if (
             form.is_valid()
@@ -447,6 +483,44 @@ class CategoryDeleteView(DashboardDeleteView):
     nav_section = "categories"
     url_basename = "category"
     singular_name = "Category"
+
+
+class CollectionListView(DashboardListView):
+    model = Collection
+    nav_section = "collections"
+    url_basename = "collection"
+    singular_name = "Collection"
+    plural_name = "Collections"
+    search_fields = ["name", "slug"]
+    filter_by_active_status = True
+    columns = [
+        {"label": "Name", "name": "name"},
+        {"label": "Slug", "name": "slug"},
+        {"label": "Active", "name": "is_active", "type": "bool"},
+    ]
+
+
+class CollectionCreateView(DashboardCreateView):
+    model = Collection
+    form_class = forms.CollectionForm
+    nav_section = "collections"
+    url_basename = "collection"
+    singular_name = "Collection"
+
+
+class CollectionUpdateView(DashboardUpdateView):
+    model = Collection
+    form_class = forms.CollectionForm
+    nav_section = "collections"
+    url_basename = "collection"
+    singular_name = "Collection"
+
+
+class CollectionDeleteView(DashboardDeleteView):
+    model = Collection
+    nav_section = "collections"
+    url_basename = "collection"
+    singular_name = "Collection"
 
 
 

@@ -56,6 +56,10 @@
       {% endif %}
       -->
       {% endif %}
+      
+      {% for label in product.labels.all %}
+      <span class="product-badge" style="background-color: {{ label.color|default:'#000' }}; color: #fff;">{{ label.name }}</span>
+      {% endfor %}
     </div>
 
     <div class="jm-product-card__hover">
@@ -109,6 +113,14 @@
     </div>
 
     <h3 class="card-title">{{ product.name }}</h3>
+
+    {% if product.tags.all %}
+    <div class="jm-product-card__tags mb-2" style="font-size: 0.75rem;">
+      {% for tag in product.tags.all %}
+        <span class="badge bg-light text-dark border fw-normal">{{ tag.name }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     <div class="jm-product-card__pricing">
       {% if product.is_flash_sale %}
