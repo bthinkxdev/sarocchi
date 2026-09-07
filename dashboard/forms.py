@@ -64,6 +64,7 @@ class ProductForm(SlugAutoMixin):
             "collections",
             "tags",
             "labels",
+            "care_instructions",
             "meta_title",
             "meta_description",
             "og_image",

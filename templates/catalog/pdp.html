@@ -236,7 +236,7 @@
     </div> <!-- close ms-auto -->
   </div> <!-- close jm-pdp-sticky -->
 
-  {% if product.specifications.all %}
+  {% if product.specifications.all or product.care_instructions %}
   <section class="jm-pdp-section mt-4 mt-lg-5 pt-4 border-top">
     <div class="row g-4">
       <div class="col-12">
@@ -259,6 +259,24 @@
             </div>
           </div>
           {% endfor %}
+          {% if product.care_instructions %}
+          <div class="accordion-item mb-2 border rounded-3 overflow-hidden" style="background-color: #fafafa;">
+            <h2 class="accordion-header" id="headingCareInstructions">
+              <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse"
+                data-bs-target="#collapseCareInstructions" aria-expanded="false"
+                aria-controls="collapseCareInstructions"
+                style="background-color: transparent; box-shadow: none;">
+                {% trans "Care Instructions" %}
+              </button>
+            </h2>
+            <div id="collapseCareInstructions" class="accordion-collapse collapse"
+              aria-labelledby="headingCareInstructions">
+              <div class="accordion-body text-muted pt-0 pb-3">
+                {{ product.care_instructions|linebreaksbr }}
+              </div>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>

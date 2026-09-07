@@ -300,6 +300,11 @@ class Product(TimeStampedModel):
         default=0,
         verbose_name="Stock quantity",
     )
+    care_instructions = models.TextField(
+        blank=True,
+        verbose_name="Care instructions",
+        help_text="Product-specific care instructions.",
+    )
     meta_title = models.CharField(max_length=70, blank=True, verbose_name="Meta title")
     meta_description = models.CharField(max_length=160, blank=True, verbose_name="Meta description")
     og_image = models.ImageField(
