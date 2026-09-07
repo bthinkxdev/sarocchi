@@ -39,6 +39,15 @@
       </select>
     </div>
     <div class="mb-3">
+      <label class="form-label small">{% trans "Collection" %}</label>
+      <select name="collection" class="form-select form-select-sm">
+        <option value="">{% trans "All" %}</option>
+        {% for col in collections %}
+        <option value="{{ col.slug }}" {% if filters.collection == col.slug %}selected{% endif %}>{{ col.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3">
       <label class="form-label small">{% trans "Price" %}</label>
       <div class="input-group input-group-sm">
         <input type="number" name="min_price" class="form-control" placeholder="Min" value="{{ request.GET.min_price }}">

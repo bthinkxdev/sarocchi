@@ -80,6 +80,8 @@ def _parse_plp_filters(request: HttpRequest) -> dict:
         filters["max_price"] = max_price
     if q := request.GET.get("q"):
         filters["q"] = q
+    if collection := request.GET.get("collection"):
+        filters["collection"] = collection
     return filters
 
 
@@ -148,6 +150,7 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
             "sort": sort,
             "categories": filter_options["categories"],
             "brands": filter_options["brands"],
+            "collections": filter_options.get("collections", []),
             "subcategories": subcategories,
             "subcategories_map": filter_options.get("subcategories_map", {}),
             "attributes": filter_options.get("attributes", []),

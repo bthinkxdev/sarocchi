@@ -243,6 +243,9 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
             Q(category__name__icontains=clean_q) |
             Q(meta_description__icontains=clean_q)
         )
+        
+    if collection := filters.get("collection"):
+        queryset = queryset.filter(collections__slug=collection)
     
     if dynamic_attrs := filters.get("dynamic_attrs"):
         for attr_name, attr_values in dynamic_attrs.items():
@@ -701,7 +704,7 @@ def get_category_by_slug(*, slug: str):
 
 def get_plp_filter_options() -> dict:
     """Return sidebar filter options for PLP."""
-    from catalog.models import Category, ProductAttribute
+    from catalog.models import Category, ProductAttribute, Collection
     categories = list(Category.objects.filter(is_active=True, parent__isnull=True).prefetch_related("children").order_by("display_order", "name"))
     
     subcategories_map = {}
@@ -722,10 +725,13 @@ def get_plp_filter_options() -> dict:
             Prefetch("values", queryset=active_values.order_by("display_order", "value"))
         )
     )
+    
+    collections = list(Collection.objects.filter(is_active=True).order_by("name"))
         
     return {
         "categories": categories,
         "brands": get_featured_brands(),
+        "collections": collections,
         "subcategories_map": subcategories_map,
         "attributes": attributes,
     }
