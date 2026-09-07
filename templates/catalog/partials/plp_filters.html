@@ -47,7 +47,30 @@
     </div>
     <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="featured" value="1" id="f-ft" {% if filters.featured %}checked{% endif %}><label class="form-check-label small" for="f-ft">{% trans "Featured" %}</label></div>
     <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="bestseller" value="1" id="f-bs" {% if filters.bestseller %}checked{% endif %}><label class="form-check-label small" for="f-bs">{% trans "Bestseller" %}</label></div>
-    <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="in_stock" value="1" id="f-stock" {% if filters.in_stock %}checked{% endif %}><label class="form-check-label small" for="f-stock">{% trans "In Stock" %}</label></div>
+    <div class="mb-3">
+      <label class="form-label small">{% trans "Availability" %}</label>
+      <select name="availability" class="form-select form-select-sm">
+        <option value="">{% trans "All" %}</option>
+        <option value="in_stock" {% if filters.availability == 'in_stock' %}selected{% endif %}>{% trans "In Stock" %}</option>
+        <option value="out_of_stock" {% if filters.availability == 'out_of_stock' %}selected{% endif %}>{% trans "Out of Stock" %}</option>
+      </select>
+    </div>
+    
+    {% for attribute in attributes %}
+    <div class="mb-3">
+      <label class="form-label small">{{ attribute.name }}</label>
+      <div class="attribute-filter-list" style="max-height: 150px; overflow-y: auto;">
+        {% for attr_value in attribute.values.all %}
+        {% with attr_composite=attribute.name|add:":"|add:attr_value.value %}
+        <div class="form-check mb-1">
+          <input class="form-check-input" type="checkbox" name="{{ attribute.name }}" value="{{ attr_value.value }}" id="attr_{{ attribute.pk }}_{{ attr_value.pk }}" {% if attr_composite in filters.selected_attr_values %}checked{% endif %}>
+          <label class="form-check-label small" for="attr_{{ attribute.pk }}_{{ attr_value.pk }}">{{ attr_value.value }}</label>
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
     <div class="mb-2">
       <label class="form-label small">{% trans "Sort" %}</label>
       <select name="sort" class="form-select form-select-sm">

@@ -227,8 +227,11 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
         queryset = queryset.filter(is_bestseller=True)
     if filters.get("new_arrival"):
         queryset = queryset.filter(is_new_arrival=True)
-    if filters.get("in_stock"):
-        queryset = queryset.filter(stock_quantity__gt=0)
+    if availability := filters.get("availability"):
+        if availability == "in_stock":
+            queryset = queryset.filter(stock_quantity__gt=0)
+        elif availability == "out_of_stock":
+            queryset = queryset.filter(stock_quantity=0)
     if min_price := filters.get("min_price"):
         queryset = queryset.filter(base_price__gte=min_price)
     if max_price := filters.get("max_price"):
@@ -240,6 +243,15 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
             Q(category__name__icontains=clean_q) |
             Q(meta_description__icontains=clean_q)
         )
+    
+    if dynamic_attrs := filters.get("dynamic_attrs"):
+        for attr_name, attr_values in dynamic_attrs.items():
+            if attr_values:
+                queryset = queryset.filter(
+                    Q(attribute_values__attribute__name=attr_name, attribute_values__value__in=attr_values) |
+                    Q(variants__attribute_values__attribute__name=attr_name, variants__attribute_values__value__in=attr_values)
+                ).distinct()
+                
     return queryset
 
 
@@ -689,17 +701,33 @@ def get_category_by_slug(*, slug: str):
 
 def get_plp_filter_options() -> dict:
     """Return sidebar filter options for PLP."""
-    from catalog.models import Category
+    from catalog.models import Category, ProductAttribute
     categories = list(Category.objects.filter(is_active=True, parent__isnull=True).prefetch_related("children").order_by("display_order", "name"))
     
     subcategories_map = {}
     for cat in categories:
         subcategories_map[cat.pk] = [{"pk": child.pk, "name": child.name} for child in cat.children.all() if child.is_active]
         
+    from django.db.models import Prefetch, Q
+    from catalog.models import ProductAttributeValue
+    
+    active_values = ProductAttributeValue.objects.filter(
+        Q(products__is_active=True) | Q(variants__product__is_active=True)
+    ).distinct()
+    
+    attributes = list(
+        ProductAttribute.objects.filter(
+            values__in=active_values
+        ).distinct().prefetch_related(
+            Prefetch("values", queryset=active_values.order_by("display_order", "value"))
+        )
+    )
+        
     return {
         "categories": categories,
         "brands": get_featured_brands(),
         "subcategories_map": subcategories_map,
+        "attributes": attributes,
     }
 
 

@@ -55,8 +55,25 @@ def _parse_plp_filters(request: HttpRequest) -> dict:
         filters["bestseller"] = True
     if request.GET.get("new_arrival") == "1":
         filters["new_arrival"] = True
-    if request.GET.get("in_stock") == "1":
-        filters["in_stock"] = True
+    if availability := request.GET.get("availability"):
+        filters["availability"] = availability
+    
+    try:
+        from catalog.models import ProductAttribute
+        valid_attrs = set(ProductAttribute.objects.values_list("name", flat=True))
+        dynamic_attrs = {}
+        selected_attr_values = []
+        for attr_name in valid_attrs:
+            values = request.GET.getlist(attr_name)
+            if values:
+                dynamic_attrs[attr_name] = values
+                for v in values:
+                    selected_attr_values.append(f"{attr_name}:{v}")
+        if dynamic_attrs:
+            filters["dynamic_attrs"] = dynamic_attrs
+            filters["selected_attr_values"] = selected_attr_values
+    except Exception:
+        pass
     if min_price := request.GET.get("min_price"):
         filters["min_price"] = min_price
     if max_price := request.GET.get("max_price"):
@@ -133,6 +150,7 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
             "brands": filter_options["brands"],
             "subcategories": subcategories,
             "subcategories_map": filter_options.get("subcategories_map", {}),
+            "attributes": filter_options.get("attributes", []),
             "active_category": active_cat,
         }
     )

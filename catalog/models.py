@@ -251,6 +251,12 @@ class Product(TimeStampedModel):
         related_name="products",
         verbose_name="Collections",
     )
+    attribute_values = models.ManyToManyField(
+        "ProductAttributeValue",
+        blank=True,
+        related_name="products",
+        verbose_name="Attribute values",
+    )
     base_price = models.DecimalField(
         max_digits=12,
         decimal_places=2,
