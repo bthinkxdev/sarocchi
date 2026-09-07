@@ -197,7 +197,23 @@ def _render_product_form(request, product, mode):
             product = form.save()
             
             has_variants = request.POST.get("has_variants") == "on"
+            
             if has_variants:
+                dynamic_attr_names = request.POST.getlist("dynamic_attr_name[]")
+                dynamic_attr_values = request.POST.getlist("dynamic_attr_values[]")
+                
+                product_attr_ids = []
+                for i in range(len(dynamic_attr_names)):
+                    attr_name = dynamic_attr_names[i].strip()
+                    vals_str = dynamic_attr_values[i].strip()
+                    if attr_name and vals_str:
+                        attr_obj, _ = ProductAttribute.objects.get_or_create(name=attr_name)
+                        vals = [v.strip() for v in vals_str.split(",") if v.strip()]
+                        for v in vals:
+                            val_obj, _ = ProductAttributeValue.objects.get_or_create(attribute=attr_obj, value=v)
+                            product_attr_ids.append(val_obj.id)
+                
+                product.attribute_values.set(product_attr_ids)
                 product.variants.all().delete()
                 
                 v_sku_suffixes = request.POST.getlist("variant_sku_suffix[]")
@@ -254,6 +270,7 @@ def _render_product_form(request, product, mode):
                 product.save(update_fields=["stock_quantity", "base_price", "mrp", "purchase_price"])
             else:
                 product.variants.all().delete()
+                product.attribute_values.clear()
 
             def save_media_formset(formset):
                 formset.instance = product
@@ -348,7 +365,16 @@ def _render_product_form(request, product, mode):
                     "post_attr_string": dynamic_attrs_str
                 })
     else:
-        has_existing_variants = product.variants.exists() if product else False
+        has_existing_variants = False
+        if product:
+            has_existing_variants = product.variants.exists() or product.attribute_values.exists()
+            
+            for av in product.attribute_values.select_related("attribute").all():
+                if av.attribute.name not in dynamic_options:
+                    dynamic_options[av.attribute.name] = []
+                if av.value not in dynamic_options[av.attribute.name]:
+                    dynamic_options[av.attribute.name].append(av.value)
+
         if has_existing_variants:
             for variant in product.variants.prefetch_related("attribute_values").all():
                 attr_str = "|".join([f"{av.attribute.name}:{av.value}" for av in variant.attribute_values.all()])

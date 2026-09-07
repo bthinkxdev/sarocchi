@@ -262,10 +262,10 @@
               {% for opt in dynamic_options_list %}
               <div class="row gx-2 mb-2 align-items-center attr-dynamic-row">
                 <div class="col-12 col-md-3 mb-2 mb-md-0">
-                  <input type="text" class="form-control attr-name-input" placeholder="e.g. Size, Color, Material" list="global-attr-list" value="{{ opt.name }}">
+                  <input type="text" class="form-control attr-name-input" name="dynamic_attr_name[]" placeholder="e.g. Size, Color, Material" list="global-attr-list" value="{{ opt.name }}">
                 </div>
                 <div class="col-10 col-md-8">
-                  <input type="text" class="form-control attr-values-input" placeholder="e.g. S, M, L (comma separated)" value="{{ opt.values }}">
+                  <input type="text" class="form-control attr-values-input" name="dynamic_attr_values[]" placeholder="e.g. S, M, L (comma separated)" value="{{ opt.values }}">
                 </div>
                 <div class="col-2 col-md-1 text-end">
                   <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-attr-row-btn w-100"><i class="ti ti-trash"></i></button>
@@ -626,6 +626,22 @@
   </div>
 </form>
 
+<!-- delete attribute modal -->
+<div class="modal fade" id="deleteAttributeModal" tabindex="-1" aria-labelledby="deleteAttributeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body p-4">
+        <div id="deleteAttributeModalBody" class="mb-4">
+          <!-- content injected here -->
+        </div>
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-primary px-4 rounded-pill" data-bs-dismiss="modal">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   const toggle = document.getElementById('has_variants_toggle');
@@ -725,10 +741,10 @@ document.addEventListener("DOMContentLoaded", function() {
       row.className = 'row gx-2 mb-2 align-items-center attr-dynamic-row';
       row.innerHTML = `
         <div class="col-12 col-md-3 mb-2 mb-md-0">
-          <input type="text" class="form-control attr-name-input" placeholder="e.g. Size, Color, Material" list="global-attr-list">
+          <input type="text" class="form-control attr-name-input" name="dynamic_attr_name[]" placeholder="e.g. Size, Color, Material" list="global-attr-list">
         </div>
         <div class="col-10 col-md-8">
-          <input type="text" class="form-control attr-values-input" placeholder="e.g. S, M, L (comma separated)">
+          <input type="text" class="form-control attr-values-input" name="dynamic_attr_values[]" placeholder="e.g. S, M, L (comma separated)">
         </div>
         <div class="col-2 col-md-1 text-end">
           <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-attr-row-btn w-100"><i class="ti ti-trash"></i></button>
@@ -740,8 +756,46 @@ document.addEventListener("DOMContentLoaded", function() {
 
   if (attrContainer) {
     attrContainer.addEventListener('click', function(e) {
-      if (e.target.closest('.remove-attr-row-btn')) {
-        e.target.closest('.attr-dynamic-row').remove();
+      const btn = e.target.closest('.remove-attr-row-btn');
+      if (btn) {
+        const row = btn.closest('.attr-dynamic-row');
+        const attrNameInput = row.querySelector('.attr-name-input');
+        const attrName = attrNameInput ? attrNameInput.value.trim() : '';
+
+        if (attrName) {
+          const variantInputs = document.querySelectorAll('input[name="variant_dynamic_attributes[]"]');
+          let usedInVariants = [];
+          
+          variantInputs.forEach(input => {
+            const attrs = input.value.split('|');
+            const hasAttr = attrs.some(attr => {
+              const parts = attr.split(':');
+              return parts[0].trim() === attrName;
+            });
+            
+            if (hasAttr) {
+              const tr = input.closest('tr');
+              if (tr) {
+                const variantNameEl = tr.querySelector('strong');
+                const variantName = variantNameEl ? variantNameEl.textContent : 'Unknown Variant';
+                usedInVariants.push(variantName);
+              }
+            }
+          });
+
+          if (usedInVariants.length > 0) {
+            const msgHtml = `<p>Cannot delete attribute <strong>"${attrName}"</strong>. It is currently used by the following variants:</p>
+                             <ul class="mb-4 text-secondary">
+                               ${usedInVariants.map(v => `<li>${v}</li>`).join('')}
+                             </ul>`;
+            document.getElementById('deleteAttributeModalBody').innerHTML = msgHtml;
+            const modal = new bootstrap.Modal(document.getElementById('deleteAttributeModal'));
+            modal.show();
+            return;
+          }
+        }
+        
+        row.remove();
       }
     });
   }
