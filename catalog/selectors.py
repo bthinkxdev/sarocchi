@@ -233,6 +233,13 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
         queryset = queryset.filter(base_price__gte=min_price)
     if max_price := filters.get("max_price"):
         queryset = queryset.filter(base_price__lte=max_price)
+    if q := filters.get("q"):
+        clean_q = q.strip()
+        queryset = queryset.filter(
+            Q(name__icontains=clean_q) |
+            Q(category__name__icontains=clean_q) |
+            Q(meta_description__icontains=clean_q)
+        )
     return queryset
 
 
@@ -542,12 +549,12 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
         .only(*PLP_CARD_FIELDS)[:limit]
     )
 
-    brands = list(Brand.objects.filter(name__icontains=clean_query)[:5])
+    categories = list(Category.objects.filter(is_active=True, name__icontains=clean_query)[:5])
 
     return {
         "products": products,
-        "brands": brands,
-        "categories": [],
+        "brands": [],
+        "categories": categories,
         "equipment_types": [],
     }
 

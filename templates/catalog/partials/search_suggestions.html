@@ -36,27 +36,24 @@
   </div>
   {% endif %}
 
-  {# brands #}
-  {% if brands %}
+
+  {# categories #}
+  {% if categories %}
   <div class="search-suggestions-section mt-2">
     <ul class="list-unstyled mb-0" role="presentation">
-      {% for brand in brands %}
+      {% for category in categories %}
       <li role="presentation">
-        <a href="{% url 'catalog:plp' %}?brand={{ brand.id }}"
+        <a href="{% url 'catalog:plp-category' category_slug=category.slug %}"
            class="search-suggestion-link d-flex align-items-center px-3 py-2 rounded text-dark text-decoration-none transition-all"
            role="option"
-           id="search-suggestion-brand-{{ forloop.counter }}"
+           id="search-suggestion-category-{{ forloop.counter }}"
            style="gap: 12px; font-size: 0.875rem;">
           <div class="rounded bg-light d-flex align-items-center justify-content-center text-muted" style="width: 30px; height: 30px; flex-shrink: 0; border: 1px solid var(--floward-border-light);">
-            {% if brand.logo %}
-              <img src="{{ brand.logo.url }}" alt="{{ brand.name }}" class="rounded bg-light" style="width: 28px; height: 28px; object-fit: contain;">
-            {% else %}
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581a1.125 1.125 0 001.592 0l4.318-4.318a1.125 1.125 0 000-1.592l-9.58-9.581a1.125 1.125 0 00-1.591-.659zm0 0L3 9.57" />
-              </svg>
-            {% endif %}
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+            </svg>
           </div>
-          <span class="fw-medium text-dark text-truncate">{{ brand.name }}</span>
+          <span class="fw-medium text-dark text-truncate">{{ category.name }} <span class="text-muted fw-normal" style="font-size: 0.75rem;">({% trans "Category" %})</span></span>
         </a>
       </li>
       {% endfor %}

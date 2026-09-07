@@ -61,6 +61,8 @@ def _parse_plp_filters(request: HttpRequest) -> dict:
         filters["min_price"] = min_price
     if max_price := request.GET.get("max_price"):
         filters["max_price"] = max_price
+    if q := request.GET.get("q"):
+        filters["q"] = q
     return filters
 
 
@@ -99,16 +101,21 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
     filter_options = get_plp_filter_options()
 
     active_cat = resolved_cat if resolved_cat else None
-    title = (
-        resolve_meta_title(obj=active_cat, fallback="Shop All | Yarn Guy")
-        if active_cat
-        else "Shop All | Yarn Guy"
-    )
-    description = (
-        f"Browse {active_cat.name} — premium gym wear and activewear."
-        if active_cat
-        else "Browse Premium Gym Wear & Activewear - Yarn Guy."
-    )
+    
+    if q := filters.get("q"):
+        title = f'Search Results for "{q}"'
+        description = f'Products matching "{q}"'
+    else:
+        title = (
+            resolve_meta_title(obj=active_cat, fallback="Shop All | Yarn Guy")
+            if active_cat
+            else "Shop All | Yarn Guy"
+        )
+        description = (
+            f"Browse {active_cat.name} — premium gym wear and activewear."
+            if active_cat
+            else "Browse Premium Gym Wear & Activewear - Yarn Guy."
+        )
 
     context = seo_context(
         request=request,
