@@ -299,7 +299,12 @@ def _render_product_form(request, product, mode):
             
             specifications.instance = product
             specifications.save()
-            messages.success(request, f"Product '{product.name}' saved successfully.")
+            
+            if product.stock_quantity == 0:
+                messages.warning(request, f"Product '{product.name}' saved with 0 stock. It will appear as 'Sold Out' in the storefront.")
+            else:
+                messages.success(request, f"Product '{product.name}' saved successfully.")
+                
             return redirect("dashboard:product-list")
 
     else:

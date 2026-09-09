@@ -184,9 +184,18 @@ class DashboardDeleteView(DashboardContextMixin, DeleteView):
             return response
         except ProtectedError:
             obj_name = str(self.object)
+            model_name = self.model.__name__ if self.model else self.object.__class__.__name__
+            
+            if model_name == "Product":
+                reason = "it is included in an order"
+            elif model_name == "Category":
+                reason = "it contains products"
+            else:
+                reason = "it is in use by other records"
+                
             messages.error(
                 self.request,
-                f"Cannot delete this '{obj_name}' because it is included in an order."
+                f"Cannot delete '{obj_name}' because {reason}."
             )
             return redirect(self.get_success_url())
 
