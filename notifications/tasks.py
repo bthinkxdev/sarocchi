@@ -171,3 +171,26 @@ def dispatch_order_confirmation_notification(*, order_id: int) -> None:
         if profile.notify_via_whatsapp:
             send_whatsapp(phone=profile.phone, message=body)
 
+
+@shared_task(name="notifications.tasks.dispatch_low_stock_admin_notification")
+def dispatch_low_stock_admin_notification(*, product_name: str, sku: str, current_stock: int, threshold: int) -> None:
+    """
+    Alert the store's configured order-notification address that a product's stock is low.
+    """
+    from core.services import get_site_settings
+
+    site_settings = get_site_settings()
+    if not site_settings.order_notification_email:
+        return
+
+    subject = f"Low Stock Alert: {product_name} ({sku})"
+    body = (
+        f"A product has reached its low stock threshold on {site_settings.site_name}.\n\n"
+        f"Product: {product_name}\n"
+        f"SKU: {sku}\n"
+        f"Current Stock: {current_stock}\n"
+        f"Threshold: {threshold}\n\n"
+        f"Please restock this item soon to prevent overselling or out-of-stock scenarios."
+    )
+
+    send_email(email=site_settings.order_notification_email, subject=subject, message=body)

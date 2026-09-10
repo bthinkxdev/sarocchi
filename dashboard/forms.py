@@ -564,7 +564,7 @@ class SiteSettingsForm(forms.ModelForm):
         ]
         labels = {
             "vendor_email": "Email",
-            "order_notification_email": "New Order Notification Email",
+            "order_notification_email": "New Order / Low Stock Notification Email",
         }
 
     def __init__(self, *args, **kwargs):

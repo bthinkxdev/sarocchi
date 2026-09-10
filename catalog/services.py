@@ -72,19 +72,45 @@ def adjust_stock(
     """
     if isinstance(target, Product):
         locked = Product.objects.select_for_update().get(pk=target.pk)
+        old_quantity = locked.stock_quantity
         new_quantity = locked.stock_quantity + delta
         if new_quantity < 0:
             raise InsufficientStockError(f"Insufficient stock for product {locked.sku}: {reason}")
         locked.stock_quantity = new_quantity
         locked.save(update_fields=["stock_quantity", "updated_at"])
+        
+        if old_quantity > locked.low_stock_threshold and new_quantity <= locked.low_stock_threshold:
+            from notifications.tasks import dispatch_low_stock_admin_notification
+            transaction.on_commit(
+                lambda: dispatch_low_stock_admin_notification.delay(
+                    product_name=locked.name,
+                    sku=locked.sku,
+                    current_stock=new_quantity,
+                    threshold=locked.low_stock_threshold,
+                )
+            )
         return locked
 
     locked = ProductVariant.objects.select_for_update().get(pk=target.pk)
+    old_quantity = locked.stock_quantity
     new_quantity = locked.stock_quantity + delta
     if new_quantity < 0:
         raise InsufficientStockError(f"Insufficient stock for variant {locked}: {reason}")
     locked.stock_quantity = new_quantity
     locked.save(update_fields=["stock_quantity", "updated_at"])
+
+    if old_quantity > locked.low_stock_threshold and new_quantity <= locked.low_stock_threshold:
+        from notifications.tasks import dispatch_low_stock_admin_notification
+        product_name = f"{locked.product.name} ({locked.name})" if locked.name else locked.product.name
+        full_sku = f"{locked.product.sku}-{locked.sku_suffix}" if locked.sku_suffix else locked.product.sku
+        transaction.on_commit(
+            lambda: dispatch_low_stock_admin_notification.delay(
+                product_name=product_name,
+                sku=full_sku,
+                current_stock=new_quantity,
+                threshold=locked.low_stock_threshold,
+            )
+        )
     return locked
 
 
