@@ -199,6 +199,11 @@ def _render_product_form(request, product, mode):
             has_variants = request.POST.get("has_variants") == "on"
             
             if has_variants:
+                v_sku_suffixes = request.POST.getlist("variant_sku_suffix[]")
+                if not any(v.strip() for v in v_sku_suffixes):
+                    has_variants = False
+            
+            if has_variants:
                 dynamic_attr_names = request.POST.getlist("dynamic_attr_name[]")
                 dynamic_attr_values = request.POST.getlist("dynamic_attr_values[]")
                 

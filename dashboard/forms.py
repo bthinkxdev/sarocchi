@@ -92,7 +92,6 @@ class ProductForm(SlugAutoMixin):
         self.fields["size_chart"].queryset = qs.order_by("name")
         self.fields["size_chart"].empty_label = "No Size Chart"
         self.fields["slug"].required = False
-        self.fields["base_price"].required = False
         self.fields["mrp"].required = False
         self.fields["purchase_price"].required = False
         self.fields["stock_quantity"].required = False
@@ -219,7 +218,13 @@ ProductVariantFormSet = forms.inlineformset_factory(
     can_delete=True,
 )
 
-class BaseProductMediaFormSet(forms.BaseInlineFormSet):
+class HideExtraIfDataMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and self.initial_form_count() > 0:
+            self.extra = 0
+
+class BaseProductMediaFormSet(HideExtraIfDataMixin, forms.BaseInlineFormSet):
     def _construct_form(self, i, **kwargs):
         form = super()._construct_form(i, **kwargs)
         choices = [("", "--All Variants")]
@@ -335,10 +340,14 @@ class ProductSpecificationForm(forms.ModelForm):
         return val if val is not None else 0
 
 
+class BaseProductSpecificationFormSet(HideExtraIfDataMixin, forms.BaseInlineFormSet):
+    pass
+
 ProductSpecificationFormSet = forms.inlineformset_factory(
     Product,
     ProductSpecification,
     form=ProductSpecificationForm,
+    formset=BaseProductSpecificationFormSet,
     extra=1,
     can_delete=True,
 )
