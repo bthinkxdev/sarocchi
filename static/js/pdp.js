@@ -46,6 +46,18 @@
           firstVisible.click();
         }
 
+        var stickyImg = document.getElementById('pdp-sticky-image');
+        if (firstVisible) {
+          var thumbImg = firstVisible.querySelector('img');
+          if (stickyImg && thumbImg) {
+            stickyImg.src = thumbImg.src;
+          }
+        } else {
+          if (stickyImg) {
+            stickyImg.src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'%3E%3Crect width='100%25' height='100%25' fill='%23f1f5f9'/%3E%3C/svg%3E";
+          }
+        }
+
         var qtyInput = document.getElementById('pdp-qty');
         if (qtyInput) qtyInput.value = '1';
         document.querySelectorAll('.pdp-qty-input').forEach(function (input) {
@@ -62,6 +74,11 @@
             var retailContainer = document.getElementById('pdp-retail-price-container');
             var symbol = variantGroup.getAttribute('data-currency-symbol') || '';
             var elPriceValue = document.getElementById('pdp-price-value');
+
+            if (data.sku) {
+              var elSku = document.getElementById('pdp-sku-display');
+              if (elSku) elSku.textContent = 'SKU: ' + data.sku;
+            }
 
             if (elPriceValue) {
               elPriceValue.textContent = symbol + ' ' + parseFloat(data.price).toFixed(2).replace(/\.00$/, '');

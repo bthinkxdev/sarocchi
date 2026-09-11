@@ -837,10 +837,14 @@ document.addEventListener("DOMContentLoaded", function() {
       const tbody = document.getElementById('variants_tbody');
       tbody.innerHTML = ''; // clear existing
 
+      const baseSku = document.getElementById('id_sku') ? document.getElementById('id_sku').value.trim() : '';
+
       combinations.forEach(combo => {
         const nameParts = combo.map(c => c.valName);
         const name = nameParts.join(' - ');
         const attrStrings = combo.map(c => `${c.attrName}:${c.valName}`).join('|');
+        const suffix = nameParts.join('-').replace(/\s+/g, '');
+        const fullSku = baseSku ? `${baseSku}-${suffix}` : suffix;
         
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -858,8 +862,8 @@ document.addEventListener("DOMContentLoaded", function() {
           <td data-label="Purchase Price">
             <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="" required>
           </td>
-          <td data-label="SKU Suffix">
-            <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="${nameParts.join('-').replace(/\s+/g, '')}" required>
+          <td data-label="Variant SKU">
+            <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="${fullSku}" required>
           </td>
           <td data-label="Stock">
             <input type="number" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="0" required>
@@ -876,9 +880,11 @@ document.addEventListener("DOMContentLoaded", function() {
       
       const generatedVariants = combinations.map(combo => {
         const nameParts = combo.map(c => c.valName);
+        const suffix = nameParts.join('-').replace(/\s+/g, '');
+        const fullSku = baseSku ? `${baseSku}-${suffix}` : suffix;
         return {
           name: nameParts.join(' - '),
-          sku_suffix: nameParts.join('-').replace(/\s+/g, '')
+          sku_suffix: fullSku
         };
       });
       

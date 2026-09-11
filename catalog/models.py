@@ -501,10 +501,12 @@ class ProductVariant(TimeStampedModel):
         verbose_name="Purchase Price",
     )
     sku_suffix = models.CharField(
-        max_length=32,
+        max_length=128,
         blank=True,
-        verbose_name="SKU suffix",
-        help_text="Appended to the parent product SKU.",
+        null=True,
+        unique=True,
+        verbose_name="Variant SKU",
+        help_text="Full globally unique SKU for this variant.",
     )
     stock_quantity = models.PositiveIntegerField(
         default=0,
@@ -521,7 +523,7 @@ class ProductVariant(TimeStampedModel):
         ordering = ["display_order", "id"]
 
     def __str__(self) -> str:
-        return f"{self.product.sku}-{self.sku_suffix}"
+        return self.sku_suffix or f"{self.product.sku}-Variant"
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

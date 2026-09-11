@@ -59,7 +59,9 @@ def trigger_shipment_on_confirmed(order):
         #what reaches Delhivery, not just the base product code.
         sku_code = product.sku
         if item.variant and item.variant.sku_suffix:
-            sku_code = f"{product.sku} - {item.variant.sku_suffix}"
+            sku_code = item.variant.sku_suffix
+        else:
+            sku_code = product.sku
         item_descriptions.append(sku_code)
 
         # accumulate weight

@@ -690,6 +690,7 @@ def get_variant_price(
         "low_stock_threshold": getattr(variant, 'low_stock_threshold', getattr(product, 'low_stock_threshold', 5)) if variant_id else getattr(product, 'low_stock_threshold', 5),
         "mrp": str(mrp) if mrp else "",
         "has_mrp_discount": "true" if mrp and mrp > retail_price else "false",
+        "sku": getattr(variant, 'sku_suffix', product.sku) if variant_id and variant else product.sku,
     }
     if sale["is_flash_sale"]:
         result["original_price"] = str(sale["original_price"])

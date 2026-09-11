@@ -102,7 +102,7 @@ def adjust_stock(
     if old_quantity > locked.low_stock_threshold and new_quantity <= locked.low_stock_threshold:
         from notifications.tasks import dispatch_low_stock_admin_notification
         product_name = f"{locked.product.name} ({locked.name})" if locked.name else locked.product.name
-        full_sku = f"{locked.product.sku}-{locked.sku_suffix}" if locked.sku_suffix else locked.product.sku
+        full_sku = locked.sku_suffix if locked.sku_suffix else locked.product.sku
         transaction.on_commit(
             lambda: dispatch_low_stock_admin_notification.delay(
                 product_name=product_name,
