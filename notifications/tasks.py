@@ -84,12 +84,12 @@ def dispatch_new_order_admin_notification(*, order_id: int) -> None:
     from orders.models import Order
 
     site_settings = get_site_settings()
-    if not site_settings.order_notification_email:
+    if not site_settings.order_notification_email or not getattr(site_settings, "notify_new_order", True):
         return
 
     order = (
         Order.objects.select_related("customer_profile__user", "currency")
-        .prefetch_related("items__product")
+        .prefetch_related("items__product", "items__variant")
         .filter(pk=order_id)
         .first()
     )
@@ -97,7 +97,14 @@ def dispatch_new_order_admin_notification(*, order_id: int) -> None:
         return
 
     items = list(order.items.all())
-    lines_text = "\n".join(f"- {item.product.name} x{item.quantity}" for item in items)
+    
+    lines_text_list = []
+    for item in items:
+        sku = item.variant.sku_suffix if item.variant and item.variant.sku_suffix else item.product.sku
+        sku_text = f" (SKU: {sku})" if sku else ""
+        lines_text_list.append(f"- {item.product.name}{sku_text} x{item.quantity}")
+    lines_text = "\n".join(lines_text_list)
+    
     currency_code = order.currency.code if order.currency else ""
 
     subject = f"New order {order.order_number} — {order.get_order_status_display()}"
@@ -180,7 +187,7 @@ def dispatch_low_stock_admin_notification(*, product_name: str, sku: str, curren
     from core.services import get_site_settings
 
     site_settings = get_site_settings()
-    if not site_settings.order_notification_email:
+    if not site_settings.order_notification_email or not getattr(site_settings, "notify_low_stock", True):
         return
 
     subject = f"Low Stock Alert: {product_name} ({sku})"

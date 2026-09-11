@@ -225,8 +225,23 @@ class SiteSettings(TimeStampedModel):
     )
     order_notification_email = models.EmailField(
         blank=True,
-        verbose_name="New Order / Low Stock Notification Email",
-        help_text="Email address to notify whenever a new order is placed or a product hits low stock. Leave blank to disable.",
+        verbose_name="Notification Email",
+        help_text="Email address to receive system notifications. Leave blank to disable all.",
+    )
+    notify_new_order = models.BooleanField(
+        default=True,
+        verbose_name="New Order Notification",
+        help_text="Enable to receive notifications for new orders.",
+    )
+    notify_low_stock = models.BooleanField(
+        default=True,
+        verbose_name="Low Stock Notification",
+        help_text="Enable to receive notifications for low stock alerts.",
+    )
+    notify_enquiry = models.BooleanField(
+        default=True,
+        verbose_name="Enquiry Notification",
+        help_text="Enable to receive notifications for contact inquiries.",
     )
     default_currency = models.ForeignKey(
         Currency,

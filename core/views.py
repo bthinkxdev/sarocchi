@@ -128,8 +128,8 @@ def submit_inquiry_view(request: HttpRequest) -> HttpResponse:
 
         site_settings = get_site_settings()
         
-        #dispatch background email to vendor
-        if site_settings.vendor_email:
+        #dispatch background notification emails
+        if site_settings.order_notification_email and getattr(site_settings, "notify_enquiry", True):
             subject = f"New Inquiry from {inquiry.name}"
             message = (
                 f"Name: {inquiry.name}\n"
@@ -145,7 +145,7 @@ def submit_inquiry_view(request: HttpRequest) -> HttpResponse:
                     subject=subject,
                     body=message,
                     from_email=from_email_str,
-                    to=[site_settings.vendor_email],
+                    to=[site_settings.order_notification_email],
                     reply_to=[inquiry.email]
                 )
                 try:

@@ -536,9 +536,33 @@ class SiteSettingsForm(forms.ModelForm):
         "whatsapp_number",
         "vendor_email",
         "order_notification_email",
+        "notify_new_order",
+        "notify_low_stock",
+        "notify_enquiry",
         "tax_rate_percent",
         "cod_delivery_charge",
         "default_currency",
+        "razorpay_key_id",
+        "razorpay_key_secret",
+    ]
+    field_order = [
+        "site_name",
+        "logo",
+        "primary_color",
+        "secondary_color",
+        "font_family",
+        "facebook_url",
+        "instagram_url",
+        "twitter_url",
+        "whatsapp_number",
+        "default_currency",
+        "vendor_email",
+        "order_notification_email",
+        "notify_new_order",
+        "notify_low_stock",
+        "notify_enquiry",
+        "tax_rate_percent",
+        "cod_delivery_charge",
         "razorpay_key_id",
         "razorpay_key_secret",
     ]
@@ -557,6 +581,9 @@ class SiteSettingsForm(forms.ModelForm):
             "whatsapp_number",
             "vendor_email",
             "order_notification_email",
+            "notify_new_order",
+            "notify_low_stock",
+            "notify_enquiry",
             "tax_rate_percent",
             "cod_delivery_charge",
             "razorpay_key_id",
@@ -564,7 +591,7 @@ class SiteSettingsForm(forms.ModelForm):
         ]
         labels = {
             "vendor_email": "Email",
-            "order_notification_email": "New Order / Low Stock Notification Email",
+            "order_notification_email": "Notification Email",
         }
 
     def __init__(self, *args, **kwargs):
@@ -574,10 +601,13 @@ class SiteSettingsForm(forms.ModelForm):
             self.fields["default_currency"].initial = default_curr.pk
         for field_name, field in self.fields.items():
             if field_name != "logo":
-                if "class" in field.widget.attrs:
-                    field.widget.attrs["class"] += " form-control"
+                if isinstance(field.widget, forms.CheckboxInput):
+                    field.widget.attrs["class"] = "form-check-input"
                 else:
-                    field.widget.attrs["class"] = "form-control"
+                    if "class" in field.widget.attrs:
+                        field.widget.attrs["class"] += " form-control"
+                    else:
+                        field.widget.attrs["class"] = "form-control"
 
     def save(self, commit=True):
         instance = super().save(commit)
