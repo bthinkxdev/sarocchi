@@ -1,7 +1,16 @@
 {% load i18n %}
+<style>
+  [data-bs-toggle="collapse"][aria-expanded="true"] .bi-chevron-down {
+    transform: rotate(180deg);
+  }
+
+  .bi-chevron-down {
+    transition: transform 0.2s ease-in-out;
+  }
+</style>
 {{ subcategories_map|json_script:"subcategories-data" }}
 <form class="plp-filters card p-3" method="get" action="{{ request.path }}" hx-get="{{ request.path }}"
-  hx-target="#product-grid" hx-swap="innerHTML" hx-push-url="true" hx-indicator="#product-grid"
+  hx-target="#product-grid" hx-swap="innerHTML" hx-push-url="true" hx-indicator="#product-grid" 
   hx-trigger="submit">
   <h2 class="h6 plp-filters-header">{% trans "Filters" %}</h2>
   <div class="plp-filters-body">
@@ -64,19 +73,37 @@
         <option value="out_of_stock" {% if filters.availability == 'out_of_stock' %}selected{% endif %}>{% trans "Out of Stock" %}</option>
       </select>
     </div>
-    
+
     {% for attribute in attributes %}
-    <div class="mb-3">
-      <label class="form-label small">{{ attribute.name }}</label>
-      <div class="attribute-filter-list" style="max-height: 150px; overflow-y: auto;">
-        {% for attr_value in attribute.values.all %}
-        {% with attr_composite=attribute.name|add:":"|add:attr_value.value %}
-        <div class="form-check mb-1">
-          <input class="form-check-input" type="checkbox" name="{{ attribute.name }}" value="{{ attr_value.value }}" id="attr_{{ attribute.pk }}_{{ attr_value.pk }}" {% if attr_composite in filters.selected_attr_values %}checked{% endif %}>
-          <label class="form-check-label small" for="attr_{{ attribute.pk }}_{{ attr_value.pk }}">{{ attr_value.value }}</label>
+    <div class="mb-2 border-bottom pb-2">
+      <div class="d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+        data-bs-target="#collapseAttr{{ attribute.pk }}"
+        aria-expanded="{% if attribute.name in filters.dynamic_attrs %}true{% else %}false{% endif %}"
+        style="cursor: pointer;">
+        <span class="form-label small mb-0">{{ attribute.name }}</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+          class="bi bi-chevron-down text-muted" viewBox="0 0 16 16" style="margin-right: 0.75rem;">
+          <path fill-rule="evenodd"
+            d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z" />
+        </svg>
+      </div>
+      <div class="collapse {% if attribute.name in filters.dynamic_attrs %}show{% endif %} mt-2"
+        id="collapseAttr{{ attribute.pk }}">
+        <div class="attribute-filter-list"
+          style="max-height: 200px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #d1d5db transparent;">
+          {% for attr_value in attribute.display_values %}
+          {% with attr_composite=attribute.name|add:":"|add:attr_value.value %}
+          <div class="form-check ms-1 mb-2 d-flex align-items-center">
+            <input class="form-check-input mt-0 me-2" type="checkbox" name="{{ attribute.name }}"
+              value="{{ attr_value.value }}" id="attr_{{ attribute.pk }}_{{ attr_value.pk }}" {% if attr_composite in filters.selected_attr_values %}checked{% endif %} style="transform: scale(1.1); cursor: pointer;">
+            <label class="form-check-label" for="attr_{{ attribute.pk }}_{{ attr_value.pk }}"
+              style="cursor: pointer; font-size: 0.95rem; line-height: 1.1;">
+              {{ attr_value.value }}
+            </label>
+          </div>
+          {% endwith %}
+          {% endfor %}
         </div>
-        {% endwith %}
-        {% endfor %}
       </div>
     </div>
     {% endfor %}
@@ -97,43 +124,43 @@
   </div>
 </form>
 <script>
-if (typeof window.updateSubcategories !== 'function') {
-  window.updateSubcategories = function(selectElem) {
-    const form = selectElem.closest('form');
-    const wrapper = form.querySelector('.subcategory-wrapper');
-    const subSelect = form.querySelector('select[name=subcategory]');
-    
-    const scriptTag = document.getElementById('subcategories-data');
-    if (!scriptTag) return;
-    
-    let subcategoriesMap = {};
-    try {
-      subcategoriesMap = JSON.parse(scriptTag.textContent);
-    } catch (e) {
-      console.error("Error parsing subcategories map", e);
-      return;
-    }
-    
-    const catId = selectElem.value;
-    const subs = subcategoriesMap[catId] || [];
-    
-    while (subSelect.options.length > 1) {
-      subSelect.remove(1);
-    }
-    
-    subs.forEach(sub => {
-      const option = document.createElement('option');
-      option.value = sub.pk;
-      option.textContent = sub.name;
-      subSelect.appendChild(option);
-    });
-    
-    if (subs.length > 0) {
-      wrapper.style.display = 'block';
-    } else {
-      wrapper.style.display = 'none';
-      subSelect.value = '';
-    }
-  };
-}
+  if (typeof window.updateSubcategories !== 'function') {
+    window.updateSubcategories = function(selectElem) {
+      const form = selectElem.closest('form');
+      const wrapper = form.querySelector('.subcategory-wrapper');
+      const subSelect = form.querySelector('select[name=subcategory]');
+
+      const scriptTag = document.getElementById('subcategories-data');
+      if (!scriptTag) return;
+
+      let subcategoriesMap = {};
+      try {
+        subcategoriesMap = JSON.parse(scriptTag.textContent);
+      } catch (e) {
+        console.error("Error parsing subcategories map", e);
+        return;
+      }
+
+      const catId = selectElem.value;
+      const subs = subcategoriesMap[catId] || [];
+
+      while (subSelect.options.length > 1) {
+        subSelect.remove(1);
+      }
+
+      subs.forEach(sub => {
+        const option = document.createElement('option');
+        option.value = sub.pk;
+        option.textContent = sub.name;
+        subSelect.appendChild(option);
+      });
+
+      if (subs.length > 0) {
+        wrapper.style.display = 'block';
+      } else {
+        wrapper.style.display = 'none';
+        subSelect.value = '';
+      }
+    };
+  }
 </script>

@@ -250,10 +250,11 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
     if dynamic_attrs := filters.get("dynamic_attrs"):
         for attr_name, attr_values in dynamic_attrs.items():
             if attr_values:
-                queryset = queryset.filter(
-                    Q(attribute_values__attribute__name=attr_name, attribute_values__value__in=attr_values) |
-                    Q(variants__attribute_values__attribute__name=attr_name, variants__attribute_values__value__in=attr_values)
-                ).distinct()
+                q_objs = Q()
+                for val in attr_values:
+                    q_objs |= Q(attribute_values__attribute__name=attr_name, attribute_values__value__iexact=val)
+                    q_objs |= Q(variants__attribute_values__attribute__name=attr_name, variants__attribute_values__value__iexact=val)
+                queryset = queryset.filter(q_objs).distinct()
                 
     return queryset
 
@@ -714,17 +715,32 @@ def get_plp_filter_options() -> dict:
     from django.db.models import Prefetch, Q
     from catalog.models import ProductAttributeValue
     
-    active_values = ProductAttributeValue.objects.filter(
+    active_value_ids = list(ProductAttributeValue.objects.filter(
         Q(products__is_active=True) | Q(variants__product__is_active=True)
-    ).distinct()
+    ).values_list("id", flat=True).distinct())
     
     attributes = list(
         ProductAttribute.objects.filter(
-            values__in=active_values
+            values__in=active_value_ids
         ).distinct().prefetch_related(
-            Prefetch("values", queryset=active_values.order_by("display_order", "value"))
+            Prefetch("values", queryset=ProductAttributeValue.objects.filter(id__in=active_value_ids).order_by("display_order", "value"))
         )
     )
+    
+    for attr in attributes:
+        seen = set()
+        display_values = []
+        for val in attr.values.all():
+            val_lower = val.value.strip().lower()
+            if val_lower not in seen:
+                seen.add(val_lower)
+                clean_val = val.value.strip()
+                if len(clean_val) <= 2:
+                    val.value = clean_val.upper()
+                else:
+                    val.value = clean_val.title()
+                display_values.append(val)
+        attr.display_values = display_values
     
     collections = list(Collection.objects.filter(is_active=True).order_by("name"))
         
