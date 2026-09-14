@@ -49,6 +49,11 @@
           </tbody>
         </table>
       </div>
+      {% if orders %}
+      <div class="card-footer bg-transparent text-center px-4 py-3 border-top">
+        <a href="{% url 'dashboard:order-list' %}?customer={{ profile.pk }}" class="btn btn-outline-primary btn-sm">View All Orders</a>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>

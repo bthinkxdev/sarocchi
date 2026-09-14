@@ -24,6 +24,7 @@ class CustomerListView(DashboardListView):
     search_fields = ["user__email", "user__username", "phone"]
     select_related = ["user"]
     can_create = False
+    can_view = True
     can_delete = False
     columns = [
         {"label": "Name", "name": "user.get_full_name"},

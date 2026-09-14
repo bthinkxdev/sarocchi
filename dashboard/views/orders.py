@@ -41,6 +41,11 @@ def order_list(request: HttpRequest) -> HttpResponse:
     status = request.GET.get("status", "").strip()
     if status and view == "orders":
         qs = qs.filter(order_status=status)
+        
+    customer_id = request.GET.get("customer", "").strip()
+    if customer_id:
+        qs = qs.filter(customer_profile_id=customer_id)
+
     from django.db.models import Q
     query = request.GET.get("q", "").strip()
     if query:
@@ -76,6 +81,8 @@ def order_list(request: HttpRequest) -> HttpResponse:
             "label": f"Payment: {dict(PaymentStatus.choices).get(payment_status, payment_status)}",
             "clear_url": _clear_url("payment_status"),
         })
+    if customer_id:
+        active_filters.append({"label": f"Customer ID: {customer_id}", "clear_url": _clear_url("customer")})
     if query:
         active_filters.append({"label": f'Search: "{query}"', "clear_url": _clear_url("q")})
 
