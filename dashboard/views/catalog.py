@@ -517,6 +517,22 @@ class CategoryUpdateView(DashboardUpdateView):
     nav_section = "categories"
     url_basename = "category"
     singular_name = "Category"
+    template_name = "dashboard/catalog/category_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category_id = self.object.pk
+        category_ids = [category_id]
+        category_ids.extend(
+            Category.objects.filter(parent_id=category_id).values_list("id", flat=True)
+        )
+        qs = Product.objects.filter(category_id__in=category_ids).prefetch_related("images")
+        context["product_count"] = qs.count()
+        context["category_products"] = qs.order_by('-created_at')[:7]
+        from core.models import Currency
+        default_currency = Currency.objects.filter(is_default=True).first()
+        context["currency_symbol"] = default_currency.symbol if default_currency else ""
+        return context
 
 
 class CategoryDeleteView(DashboardDeleteView):
