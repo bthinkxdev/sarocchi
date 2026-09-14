@@ -237,13 +237,22 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
     if max_price := filters.get("max_price"):
         queryset = queryset.filter(base_price__lte=max_price)
     if q := filters.get("q"):
+        import re
         clean_q = q.strip()
-        queryset = queryset.filter(
-            Q(name__icontains=clean_q) |
-            Q(category__name__icontains=clean_q) |
-            Q(meta_description__icontains=clean_q) |
-            Q(tags__name__icontains=clean_q)
-        ).distinct()
+        smart_q = re.sub(r'[^a-zA-Z0-9\s]', ' ', clean_q).strip()
+        search_term = smart_q if smart_q else clean_q
+        
+        words = search_term.split()
+        if words:
+            query_obj = Q()
+            for word in words:
+                query_obj &= (
+                    Q(name__icontains=word) |
+                    Q(category__name__icontains=word) |
+                    Q(meta_description__icontains=word) |
+                    Q(tags__name__icontains=word)
+                )
+            queryset = queryset.filter(query_obj).distinct()
         
     if collection := filters.get("collection"):
         queryset = queryset.filter(collections__slug=collection)
@@ -557,20 +566,27 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
         }
 
     from catalog.models import Brand, Category
+    import re
 
     clean_query = query.strip()
+    smart_query = re.sub(r'[^a-zA-Z0-9\s]', ' ', clean_query).strip()
+    search_term = smart_query if smart_query else clean_query
+
+    words = search_term.split()
+    query_obj = Q(is_active=True)
+    if words:
+        for word in words:
+            query_obj &= (Q(name__icontains=word) | Q(tags__name__icontains=word))
+            
     products = list(
-        Product.objects.filter(
-            Q(is_active=True) & 
-            (Q(name__icontains=clean_query) | Q(tags__name__icontains=clean_query))
-        )
+        Product.objects.filter(query_obj)
         .distinct()
         .select_related("category")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)[:limit]
     )
 
-    categories = list(Category.objects.filter(is_active=True, name__icontains=clean_query)[:5])
+    categories = list(Category.objects.filter(is_active=True, name__icontains=search_term)[:5])
 
     return {
         "products": products,
