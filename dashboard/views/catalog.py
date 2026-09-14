@@ -290,7 +290,7 @@ def _render_product_form(request, product, mode):
                     for f in formset.forms:
                         if f.instance == instance:
                             sku = f.cleaned_data.get('variant_sku')
-                            if sku:
+                            if sku and sku != "all":
                                 instance.variant = product.variants.filter(sku_suffix=sku).first()
                             else:
                                 instance.variant = None

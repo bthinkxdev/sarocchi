@@ -227,7 +227,7 @@ class HideExtraIfDataMixin:
 class BaseProductMediaFormSet(HideExtraIfDataMixin, forms.BaseInlineFormSet):
     def _construct_form(self, i, **kwargs):
         form = super()._construct_form(i, **kwargs)
-        choices = [("", "--All Variants")]
+        choices = [("", "Select"), ("all", "--All Variants")]
         if self.instance and self.instance.pk:
             variants = ProductVariant.objects.filter(product=self.instance).order_by('name')
             for v in variants:
@@ -241,7 +241,7 @@ class BaseProductMediaFormSet(HideExtraIfDataMixin, forms.BaseInlineFormSet):
     @property
     def empty_form(self):
         form = super().empty_form
-        choices = [("", "--All Variants")]
+        choices = [("", "Select"), ("all", "--All Variants")]
         if self.instance and self.instance.pk:
             variants = ProductVariant.objects.filter(product=self.instance).order_by('name')
             for v in variants:
@@ -260,8 +260,11 @@ class ProductImageForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk and self.instance.variant:
-            self.initial['variant_sku'] = self.instance.variant.sku_suffix
+        if self.instance and self.instance.pk:
+            if self.instance.variant:
+                self.initial['variant_sku'] = self.instance.variant.sku_suffix
+            else:
+                self.initial['variant_sku'] = "all"
             
         self.fields["display_order"].required = False
         if self.empty_permitted:
@@ -301,8 +304,11 @@ class ProductVideoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk and self.instance.variant:
-            self.initial['variant_sku'] = self.instance.variant.sku_suffix
+        if self.instance and self.instance.pk:
+            if self.instance.variant:
+                self.initial['variant_sku'] = self.instance.variant.sku_suffix
+            else:
+                self.initial['variant_sku'] = "all"
 
     class Meta:
         model = ProductVideo

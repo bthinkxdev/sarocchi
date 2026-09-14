@@ -889,7 +889,8 @@ document.addEventListener("DOMContentLoaded", function() {
       });
       
       function updateSelectOptions(select, variants) {
-        const firstOption = select.options.length > 0 ? select.options[0].outerHTML : '<option value="">---------</option>';
+        const currentValue = select.value;
+        const firstOption = '<option value="">Select</option><option value="all">--All Variants</option>';
         select.innerHTML = firstOption;
         variants.forEach(v => {
           const opt = document.createElement('option');
@@ -897,6 +898,10 @@ document.addEventListener("DOMContentLoaded", function() {
           opt.textContent = v.name;
           select.appendChild(opt);
         });
+        select.value = currentValue;
+        if ($(select).hasClass('select2-hidden-accessible')) {
+          $(select).trigger('change');
+        }
       }
 
       document.querySelectorAll('select[name$="-variant_sku"]').forEach(select => {
