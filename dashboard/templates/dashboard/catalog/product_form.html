@@ -314,7 +314,7 @@
                     <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="{{ variant.purchase_price }}">
                   </td>
                   <td data-label="SKU Suffix">
-                    <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="{{ variant.sku_suffix }}">
+                    <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="{{ variant.sku_suffix }}" readonly>
                   </td>
                   <td data-label="Stock">
                     <input type="number" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="{{ variant.stock_quantity }}">
@@ -863,7 +863,7 @@ document.addEventListener("DOMContentLoaded", function() {
             <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="" required>
           </td>
           <td data-label="Variant SKU">
-            <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="${fullSku}" required>
+            <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="${fullSku}" required readonly>
           </td>
           <td data-label="Stock">
             <input type="number" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="0" required>
