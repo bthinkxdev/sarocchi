@@ -22,7 +22,7 @@
         {{ line.product.name }}
       </a>
       {% if line.variant %}
-      <div class="cart-line__meta text-muted small mt-1 mb-1">{{ line.variant.name }}</div>
+      <div class="cart-line__meta text-muted small mt-1 mb-1">{{ line.variant.display_name }}</div>
       {% endif %}
       <div class="cart-line__meta">{{ display_currency.symbol }} {{ line.unit_price_at_add }}</div>
       {% with max_stock=line.variant.stock_quantity|default_if_none:line.product.stock_quantity %}

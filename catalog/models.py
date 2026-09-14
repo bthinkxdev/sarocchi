@@ -482,6 +482,18 @@ class ProductVariant(TimeStampedModel):
         default=0,
         verbose_name="Display order",
     )
+    
+    @property
+    def display_name(self):
+        """Returns just the variant-specific part of the name (e.g. 'Red - S')"""
+        attr_vals = [av.value for av in self.attribute_values.all()]
+        if attr_vals:
+            return " - ".join(attr_vals)
+            
+        prefix = f"{self.product.name} - "
+        if self.name.startswith(prefix):
+            return self.name[len(prefix):]
+        return self.name
     base_price = models.DecimalField(
         max_digits=12,
         decimal_places=2,

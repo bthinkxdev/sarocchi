@@ -74,7 +74,7 @@
               value="{{ v.pk }}" autocomplete="off" {% if v.pk == selected_variant_id or not selected_variant_id and forloop.first %}checked{% endif %}>
             <label class="btn btn-outline-dark rounded-pill px-4 position-relative overflow-hidden"
               for="variant_{{ v.pk }}" {% if v.stock_quantity <= 0 %}style="color: #adb5bd; border-color: #dee2e6;" {% endif %}>
-              {% if v.sku_suffix %}{{ v.sku_suffix }}{% else %}{{ v.name }}{% endif %}
+              {{ v.display_name }}
               {% if v.stock_quantity <= 0 %} <span
                 style="position: absolute; width: 150%; height: 1px; background: currentColor; top: 50%; left: -25%; transform: rotate(-20deg); opacity: 0.5;">
                 </span>
@@ -188,9 +188,9 @@
         <span class="small fw-bold text-truncate text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ product.name }}</span>
         <span class="small text-muted text-truncate" id="pdp-sticky-variant-name" style="font-size: 0.75rem;">
           {% if target_variant %}
-            {% if target_variant.sku_suffix %}{{ target_variant.sku_suffix }}{% else %}{{ target_variant.name }}{% endif %}
+            {{ target_variant.display_name }}
           {% elif product.variant_list %}
-            {% if product.variant_list.0.sku_suffix %}{{ product.variant_list.0.sku_suffix }}{% else %}{{ product.variant_list.0.name }}{% endif %}
+            {{ product.variant_list.0.display_name }}
           {% endif %}
         </span>
       </div>

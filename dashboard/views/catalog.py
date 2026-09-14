@@ -388,10 +388,15 @@ def _render_product_form(request, product, mode):
         if has_existing_variants:
             for variant in product.variants.prefetch_related("attribute_values").all():
                 attr_str = "|".join([f"{av.attribute.name}:{av.value}" for av in variant.attribute_values.all()])
-                display_name = variant.name
-                prefix = f"{product.name} - "
-                if display_name.startswith(prefix):
-                    display_name = display_name[len(prefix):]
+                
+                attr_vals = [av.value for av in variant.attribute_values.all()]
+                if attr_vals:
+                    display_name = " - ".join(attr_vals)
+                else:
+                    display_name = variant.name
+                    prefix = f"{product.name} - "
+                    if display_name.startswith(prefix):
+                        display_name = display_name[len(prefix):]
                     
                 for av in variant.attribute_values.all():
                     if av.attribute.name not in dynamic_options:

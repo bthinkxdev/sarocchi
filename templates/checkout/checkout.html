@@ -179,7 +179,7 @@
                 {{ line.product.name }}
               </div>
               {% if line.variant %}
-              <div class="text-muted" style="font-size: 0.75rem;">{{ line.variant.name }}</div>
+              <div class="text-muted" style="font-size: 0.75rem;">{{ line.variant.display_name }}</div>
               {% endif %}
               <div class="text-muted" style="font-size: 0.75rem;">{% trans "Qty:" %} {{ line.quantity }} &times; {{ display_currency.symbol }} {{ line.unit_price_at_add }}</div>
               

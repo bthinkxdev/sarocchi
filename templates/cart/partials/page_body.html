@@ -26,7 +26,7 @@
               <a href="{% url 'catalog:pdp' slug=line.product.slug %}{% if line.variant %}?variant_id={{ line.variant.pk }}{% endif %}" class="cart-line__name text-dark text-truncate">{{ line.product.name }}</a>
               <span class="fw-semibold flex-shrink-0">{{ display_currency.symbol }} {{ line.line_subtotal }}</span>
             </div>
-            {% if line.variant %}<div class="cart-line__meta">{{ line.variant.name }}</div>{% endif %}
+            {% if line.variant %}<div class="cart-line__meta">{{ line.variant.display_name }}</div>{% endif %}
             {% with max_stock=line.variant.stock_quantity|default_if_none:line.product.stock_quantity %}
             {% if not line.product.is_in_stock or max_stock <= 0 %}
             <div class="text-danger small mt-1">{% trans "Out of stock" %}</div>
