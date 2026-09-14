@@ -253,8 +253,8 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
             if attr_values:
                 q_objs = Q()
                 for val in attr_values:
-                    q_objs |= Q(attribute_values__attribute__name=attr_name, attribute_values__value__iexact=val)
-                    q_objs |= Q(variants__attribute_values__attribute__name=attr_name, variants__attribute_values__value__iexact=val)
+                    q_objs |= Q(attribute_values__attribute__name__iexact=attr_name, attribute_values__value__iexact=val)
+                    q_objs |= Q(variants__attribute_values__attribute__name__iexact=attr_name, variants__attribute_values__value__iexact=val)
                 queryset = queryset.filter(q_objs).distinct()
                 
     return queryset
@@ -725,7 +725,7 @@ def get_plp_filter_options() -> dict:
         Q(products__is_active=True) | Q(variants__product__is_active=True)
     ).values_list("id", flat=True).distinct())
     
-    attributes = list(
+    raw_attributes = list(
         ProductAttribute.objects.filter(
             values__in=active_value_ids
         ).distinct().prefetch_related(
@@ -733,9 +733,16 @@ def get_plp_filter_options() -> dict:
         )
     )
     
-    for attr in attributes:
-        seen = set()
-        display_values = []
+    attributes_dict = {}
+    for attr in raw_attributes:
+        attr_name_lower = attr.name.strip().lower()
+        if attr_name_lower not in attributes_dict:
+            attr.name = attr.name.strip().title()
+            attr.display_values = []
+            attributes_dict[attr_name_lower] = attr
+            
+        seen = {v.value.strip().lower() for v in attributes_dict[attr_name_lower].display_values}
+        
         for val in attr.values.all():
             val_lower = val.value.strip().lower()
             if val_lower not in seen:
@@ -745,8 +752,9 @@ def get_plp_filter_options() -> dict:
                     val.value = clean_val.upper()
                 else:
                     val.value = clean_val.title()
-                display_values.append(val)
-        attr.display_values = display_values
+                attributes_dict[attr_name_lower].display_values.append(val)
+                
+    attributes = list(attributes_dict.values())
     
     collections = list(Collection.objects.filter(is_active=True).order_by("name"))
         
