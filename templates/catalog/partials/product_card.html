@@ -8,8 +8,8 @@
   data-product-badge="{% if product.is_featured %}{% trans 'Featured' %}{% elif product.is_bestseller %}{% trans 'Bestseller' %}{% elif product.is_new_arrival %}{% trans 'New' %}{% endif %}"
   {% with img=product.primary_images.0 %}
   data-product-image="{% if img and img.image %}{{ img.image.url }}{% else %}{% static 'img/product-placeholder.svg' %}{% endif %}"
-  {% endwith %}
-  data-variant-id="{{ display_variant.pk|default:'' }}"
+  {% endwith %} 
+  data-variant-id="{{ display_variant.pk|default:'' }}" 
   data-stock-quantity="{{ eff_stock }}"
   data-is-out-of-stock="{% if eff_stock <= 0 %}true{% else %}false{% endif %}"
   data-in-cart="{% if cart_product_ids and product.pk in cart_product_ids %}true{% else %}false{% endif %}"
@@ -17,8 +17,8 @@
   {# Media: only the image sits inside .ratio so Bootstrap does not stretch badge/actions into a full-bleed blocker. #}
   <div class="jm-product-card__media">
     {% with img_main=product.primary_images.0 img_hover=product.primary_images.1 %}
-    <a href="{% url 'catalog:pdp' slug=product.slug %}" class="jm-product-card__img-link ratio ratio-1x1 {% if img_hover and img_hover.image %}has-hover-img{% endif %}" tabindex="-1"
-      aria-hidden="true">
+    <a href="{% url 'catalog:pdp' slug=product.slug %}" class="jm-product-card__img-link ratio ratio-1x1 {% if img_hover and img_hover.image %}has-hover-img{% endif %}" tabindex="-1" 
+    aria-hidden="true">
       {% if img_main and img_main.image %}
       <img src="{{ img_main.image.url }}" alt="{{ img_main.alt_text|default:product.name }}"
         class="object-fit-contain jm-product-card__img-main" width="400" height="400" loading="lazy"
@@ -56,7 +56,7 @@
       {% endif %}
       -->
       {% endif %}
-      
+
       {% for label in product.labels.all %}
       <span class="product-badge" style="background-color: {{ label.color|default:'#000' }}; color: #fff;">{{ label.name }}</span>
       {% endfor %}
@@ -108,19 +108,12 @@
       {% endif %}
       <span class="jm-product-card__stock {% if eff_stock <= 0 %}is-out{% elif eff_stock <= eff_thresh %}is-low{% else %}is-in{% endif %}"
         title="{% if eff_stock <= 0 %}{% trans 'Out of Stock' %}{% elif eff_stock <= eff_thresh %}{% blocktrans with count=eff_stock %}Only {{ count }} left{% endblocktrans %}{% else %}{% trans 'In Stock' %}{% endif %}">
-        {% if eff_stock <= 0 %}{% trans "Out of Stock" %}{% elif eff_stock <= eff_thresh %}{% blocktrans with count=eff_stock %}Only {{ count }} left{% endblocktrans %}{% else %}{% trans "In Stock" %}{% endif %}
+        {% if eff_stock <= 0 %}{% trans "Out of Stock" %}{% elif eff_stock <= eff_thresh %}{% blocktrans with count=eff_stock %}Only {{ count }} left{% endblocktrans %}{% else %}{% trans "In Stock" %}{% endif %} 
       </span>
     </div>
 
     <h3 class="card-title">{{ product.name }}</h3>
 
-    {% if product.tags.all %}
-    <div class="jm-product-card__tags mb-2" style="font-size: 0.75rem;">
-      {% for tag in product.tags.all %}
-        <span class="badge bg-light text-dark border fw-normal">{{ tag.name }}</span>
-      {% endfor %}
-    </div>
-    {% endif %}
 
     <div class="jm-product-card__pricing">
       {% if product.is_flash_sale %}

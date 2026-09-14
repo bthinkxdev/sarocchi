@@ -183,12 +183,7 @@
     links.forEach(function (link, index) {
       link.setAttribute('data-suggestion-index', String(index));
     });
-    if (links.length) {
-      input.dataset.activeSuggestion = '0';
-      links[0].classList.add('is-active');
-    } else {
-      delete input.dataset.activeSuggestion;
-    }
+    delete input.dataset.activeSuggestion;
   }
 
   function setActiveSearchSuggestion(input, links, index) {
@@ -239,6 +234,16 @@
     searchInput.addEventListener('input', function () {
       if (!searchInput.value.trim()) {
         closeSearchSuggestions();
+      }
+    });
+
+    searchInput.addEventListener('search', function () {
+      if (!searchInput.value.trim()) {
+        var url = new URL(window.location.href);
+        if (url.searchParams.has('q')) {
+          url.searchParams.delete('q');
+          window.location.href = url.href;
+        }
       }
     });
 
@@ -547,12 +552,28 @@
         syncClearButton();
         if (!input.value.trim() && results) results.innerHTML = '';
       });
+      input.addEventListener('search', function () {
+        if (!input.value.trim()) {
+          var url = new URL(window.location.href);
+          if (url.searchParams.has('q')) {
+            url.searchParams.delete('q');
+            window.location.href = url.href;
+          }
+        }
+      });
       if (clearBtn) {
         clearBtn.addEventListener('click', function () {
           input.value = '';
           if (results) results.innerHTML = '';
           syncClearButton();
-          input.focus({ preventScroll: true });
+          
+          var url = new URL(window.location.href);
+          if (url.searchParams.has('q')) {
+            url.searchParams.delete('q');
+            window.location.href = url.href;
+          } else {
+            input.focus({ preventScroll: true });
+          }
         });
       }
       document.body.addEventListener('htmx:afterSwap', function (event) {

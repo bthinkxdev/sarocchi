@@ -241,8 +241,9 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
         queryset = queryset.filter(
             Q(name__icontains=clean_q) |
             Q(category__name__icontains=clean_q) |
-            Q(meta_description__icontains=clean_q)
-        )
+            Q(meta_description__icontains=clean_q) |
+            Q(tags__name__icontains=clean_q)
+        ).distinct()
         
     if collection := filters.get("collection"):
         queryset = queryset.filter(collections__slug=collection)
@@ -559,7 +560,11 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
 
     clean_query = query.strip()
     products = list(
-        Product.objects.filter(is_active=True, name__icontains=clean_query)
+        Product.objects.filter(
+            Q(is_active=True) & 
+            (Q(name__icontains=clean_query) | Q(tags__name__icontains=clean_query))
+        )
+        .distinct()
         .select_related("category")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)[:limit]
