@@ -34,6 +34,14 @@
         </select>
       </div>
       <div class="col-6 col-md-auto">
+        <select name="collection" class="form-select">
+          <option value="">All collections</option>
+          {% for col in collections %}
+          <option value="{{ col.pk }}" {% if collection_filter == col.pk|stringformat:"s" %}selected{% endif %}>{{ col.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-auto">
         <select name="status" class="form-select">
           <option value="">All status</option>
           <option value="active" {% if status_filter == "active" %}selected{% endif %}>Active</option>
@@ -44,7 +52,7 @@
       </div>
       <div class="col-12 col-md-auto d-flex align-items-center gap-2">
         <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Filter</button>
-        {% if status_filter or category_filter %}
+        {% if status_filter or category_filter or collection_filter %}
         <a href="{% url 'dashboard:product-list' %}" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
         {% endif %}
       </div>

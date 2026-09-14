@@ -70,6 +70,10 @@ class ProductListView(DashboardListView):
             )
             qs = qs.filter(category_id__in=category_ids)
             
+        collection = self.request.GET.get("collection", "")
+        if collection.isdigit():
+            qs = qs.filter(collections__id=int(collection))
+            
         if status == "top" and top_product_ids:
             preserved_order = Case(*[When(pk=pk, then=Value(pos)) for pos, pk in enumerate(top_product_ids)], output_field=IntegerField())
             return qs.order_by(preserved_order)
@@ -107,10 +111,13 @@ class ProductListView(DashboardListView):
         default_currency = Currency.objects.filter(is_default=True).first()
         context["currency_symbol"] = default_currency.symbol if default_currency else ""
         context["categories"] = Category.objects.order_by("name")
+        context["collections"] = Collection.objects.order_by("name")
         status_filter = self.request.GET.get("status", "")
         category_filter = self.request.GET.get("category", "")
+        collection_filter = self.request.GET.get("collection", "")
         context["status_filter"] = status_filter
         context["category_filter"] = category_filter
+        context["collection_filter"] = collection_filter
 
         active_filters = []
         if status_filter:
@@ -126,6 +133,14 @@ class ProductListView(DashboardListView):
             params.pop("category", None)
             active_filters.append({
                 "label": category.name if category else "Category",
+                "clear_url": f"{self.request.path}?{params.urlencode()}" if params else self.request.path,
+            })
+        if collection_filter:
+            collection = Collection.objects.filter(pk=collection_filter).first()
+            params = self.request.GET.copy()
+            params.pop("collection", None)
+            active_filters.append({
+                "label": collection.name if collection else "Collection",
                 "clear_url": f"{self.request.path}?{params.urlencode()}" if params else self.request.path,
             })
         context["active_filters"] = active_filters
@@ -571,6 +586,17 @@ class CollectionUpdateView(DashboardUpdateView):
     nav_section = "collections"
     url_basename = "collection"
     singular_name = "Collection"
+    template_name = "dashboard/catalog/collection_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = Product.objects.filter(collections=self.object).prefetch_related("images")
+        context["product_count"] = qs.count()
+        context["collection_products"] = qs.order_by('-created_at')[:7]
+        from core.models import Currency
+        default_currency = Currency.objects.filter(is_default=True).first()
+        context["currency_symbol"] = default_currency.symbol if default_currency else ""
+        return context
 
 
 class CollectionDeleteView(DashboardDeleteView):
