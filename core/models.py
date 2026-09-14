@@ -299,9 +299,18 @@ class ContactInquiry(TimeStampedModel):
     name = models.CharField(max_length=255, verbose_name="Name")
     email = models.EmailField(verbose_name="Email Address")
     message = models.TextField(verbose_name="Message")
+    reply_subject = models.CharField(max_length=255, blank=True, null=True, verbose_name="Reply Subject")
+    reply_message = models.TextField(blank=True, null=True, verbose_name="Reply Message")
+    replied_at = models.DateTimeField(blank=True, null=True, verbose_name="Replied At")
+    
     class Meta:
         verbose_name = "Contact Inquiry"
         verbose_name_plural = "Contact Inquiries"
 
     def __str__(self) -> str:
         return f"Inquiry from {self.name} ({self.email})"
+
+    @property
+    def is_replied(self) -> bool:
+        """Returns True if this inquiry has been replied to."""
+        return bool(self.replied_at)
