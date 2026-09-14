@@ -834,85 +834,93 @@ document.addEventListener("DOMContentLoaded", function() {
         combinations = cartesian(...groups);
       }
 
-      const tbody = document.getElementById('variants_tbody');
-      tbody.innerHTML = ''; // clear existing
-
-      const baseSku = document.getElementById('id_sku') ? document.getElementById('id_sku').value.trim() : '';
-
-      combinations.forEach(combo => {
-        const nameParts = combo.map(c => c.valName);
-        const name = nameParts.join(' - ');
-        const attrStrings = combo.map(c => `${c.attrName}:${c.valName}`).join('|');
-        const suffix = nameParts.join('-').replace(/\s+/g, '');
-        const fullSku = baseSku ? `${baseSku}-${suffix}` : suffix;
-        
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="position-relative">
-            <strong>${name}</strong>
-            <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn d-md-none position-absolute end-0 top-50 translate-middle-y me-3"><i class="ti ti-trash"></i></button>
-            <input type="hidden" name="variant_dynamic_attributes[]" value="${attrStrings}">
-          </td>
-          <td data-label="Base Price">
-            <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_base_price[]" value="" required>
-          </td>
-          <td data-label="MRP">
-            <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_mrp[]" value="" required>
-          </td>
-          <td data-label="Purchase Price">
-            <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="" required>
-          </td>
-          <td data-label="Variant SKU">
-            <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="${fullSku}" required readonly>
-          </td>
-          <td data-label="Stock">
-            <input type="number" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="0" required>
-          </td>
-          <td data-label="Threshold">
-            <input type="number" class="form-control form-control-sm w-100" name="variant_low_stock_threshold[]" value="5" required>
-          </td>
-          <td class="d-none d-md-table-cell text-center">
-            <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn mt-2 mt-md-0 w-100 w-md-auto"><i class="ti ti-trash"></i></button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-      
-      const generatedVariants = combinations.map(combo => {
-        const nameParts = combo.map(c => c.valName);
-        const suffix = nameParts.join('-').replace(/\s+/g, '');
-        const fullSku = baseSku ? `${baseSku}-${suffix}` : suffix;
-        return {
-          name: nameParts.join(' - '),
-          sku_suffix: fullSku
-        };
-      });
-      
-      function updateSelectOptions(select, variants) {
-        const currentValue = select.value;
-        const firstOption = '<option value="">Select</option><option value="all">--All Variants</option>';
-        select.innerHTML = firstOption;
-        variants.forEach(v => {
-          const opt = document.createElement('option');
-          opt.value = v.sku_suffix;
-          opt.textContent = v.name;
-          select.appendChild(opt);
+      const executeVariantsGeneration = () => {
+        const tbody = document.getElementById('variants_tbody');
+        tbody.innerHTML = ''; // clear existing
+  
+        const baseSku = document.getElementById('id_sku') ? document.getElementById('id_sku').value.trim() : '';
+  
+        combinations.forEach(combo => {
+          const nameParts = combo.map(c => c.valName);
+          const name = nameParts.join(' - ');
+          const attrStrings = combo.map(c => `${c.attrName}:${c.valName}`).join('|');
+          const suffix = nameParts.join('-').replace(/\s+/g, '');
+          const fullSku = baseSku ? `${baseSku}-${suffix}` : suffix;
+          
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="position-relative">
+              <strong>${name}</strong>
+              <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn d-md-none position-absolute end-0 top-50 translate-middle-y me-3"><i class="ti ti-trash"></i></button>
+              <input type="hidden" name="variant_dynamic_attributes[]" value="${attrStrings}">
+            </td>
+            <td data-label="Base Price">
+              <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_base_price[]" value="" required>
+            </td>
+            <td data-label="MRP">
+              <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_mrp[]" value="" required>
+            </td>
+            <td data-label="Purchase Price">
+              <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="" required>
+            </td>
+            <td data-label="Variant SKU">
+              <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="${fullSku}" required readonly>
+            </td>
+            <td data-label="Stock">
+              <input type="number" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="0" required>
+            </td>
+            <td data-label="Threshold">
+              <input type="number" class="form-control form-control-sm w-100" name="variant_low_stock_threshold[]" value="5" required>
+            </td>
+            <td class="d-none d-md-table-cell text-center">
+              <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn mt-2 mt-md-0 w-100 w-md-auto"><i class="ti ti-trash"></i></button>
+            </td>
+          `;
+          tbody.appendChild(tr);
         });
-        select.value = currentValue;
-        if ($(select).hasClass('select2-hidden-accessible')) {
-          $(select).trigger('change');
+        
+        const generatedVariants = combinations.map(combo => {
+          const nameParts = combo.map(c => c.valName);
+          const suffix = nameParts.join('-').replace(/\s+/g, '');
+          const fullSku = baseSku ? `${baseSku}-${suffix}` : suffix;
+          return {
+            name: nameParts.join(' - '),
+            sku_suffix: fullSku
+          };
+        });
+        
+        function updateSelectOptions(select, variants) {
+          const currentValue = select.value;
+          const firstOption = '<option value="">Select</option><option value="all">--All Variants</option>';
+          select.innerHTML = firstOption;
+          variants.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.sku_suffix;
+            opt.textContent = v.name;
+            select.appendChild(opt);
+          });
+          select.value = currentValue;
+          if ($(select).hasClass('select2-hidden-accessible')) {
+            $(select).trigger('change');
+          }
         }
-      }
-
-      document.querySelectorAll('select[name$="-variant_sku"]').forEach(select => {
-        updateSelectOptions(select, generatedVariants);
-      });
-
-      document.querySelectorAll('template[data-formset-empty]').forEach(template => {
-        template.content.querySelectorAll('select[name$="-variant_sku"]').forEach(select => {
+  
+        document.querySelectorAll('select[name$="-variant_sku"]').forEach(select => {
           updateSelectOptions(select, generatedVariants);
         });
-      });
+  
+        document.querySelectorAll('template[data-formset-empty]').forEach(template => {
+          template.content.querySelectorAll('select[name$="-variant_sku"]').forEach(select => {
+            updateSelectOptions(select, generatedVariants);
+          });
+        });
+      };
+
+      if (window.ActionLoader) {
+        window.ActionLoader.execute(generateBtn, "Generating variants...", executeVariantsGeneration);
+      } else {
+        executeVariantsGeneration();
+      }
     });
   }
 

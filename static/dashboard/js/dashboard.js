@@ -55,6 +55,54 @@
         false
       );
     });
+
+    //double-click prevention at the click level 
+    document.addEventListener("click", function(event) {
+      var btn = event.target.closest && event.target.closest('button[type="submit"], input[type="submit"]');
+      if (btn) {
+        var form = btn.closest('form');
+        if (form && form.dataset.loaderActive) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }
+    }, true);
+
+    //universal action loader for all POST forms to prevent double-submit
+    document.addEventListener("submit", function(event) {
+      var form = event.target;
+      if (form && form.tagName === "FORM" && form.method && form.method.toLowerCase() === "post") {
+        if (form.dataset.loaderActive) {
+          event.preventDefault();
+          return;
+        }
+
+        if (typeof form.checkValidity === "function" && !form.checkValidity() && !form.hasAttribute('novalidate')) {
+          return;
+        }
+
+        form.dataset.loaderActive = "true";
+        var submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+        if (submitBtn && window.ActionLoader) {
+          var loadingText = submitBtn.getAttribute("data-loading-text");
+          if (!loadingText) {
+            var btnText = (submitBtn.textContent || submitBtn.value || "").trim().toLowerCase();
+            if (btnText.indexOf("delete") !== -1 || btnText.indexOf("remove") !== -1) {
+              loadingText = "Deleting...";
+            } else if (btnText.indexOf("save") !== -1 || btnText.indexOf("update") !== -1 || btnText.indexOf("create") !== -1) {
+              loadingText = "Saving...";
+            } else if (btnText.indexOf("login") !== -1 || btnText.indexOf("sign in") !== -1) {
+              loadingText = "Logging in...";
+            } else {
+              loadingText = "Processing...";
+            }
+          }
+          setTimeout(function() {
+            window.ActionLoader.showLoadingState(submitBtn, loadingText);
+          }, 10);
+        }
+      }
+    });
   }
 
 
@@ -308,6 +356,51 @@
       });
     });
   }
+
+  //universal action loader
+  window.ActionLoader = {
+    showLoadingState: function (btnElement, loadingText) {
+      var btn = typeof btnElement === "string" ? document.getElementById(btnElement) : btnElement;
+      if (!btn) return null;
+
+      var originalText = btn.innerHTML;
+      var originalDisabled = btn.disabled;
+      
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' + (loadingText || 'Loading...');
+      
+      return function restore() {
+        if (btn) {
+          btn.disabled = originalDisabled;
+          btn.innerHTML = originalText;
+        }
+      };
+    },
+    
+    execute: async function (btnElement, loadingText, actionFn) {
+      var restoreFn = this.showLoadingState(btnElement, loadingText);
+      if (!restoreFn) return;
+      
+      var minLoadingTime = 500;
+      var startTime = Date.now();
+      
+      try {
+        await new Promise(function(resolve) { setTimeout(resolve, 50); });
+        
+        await actionFn();
+        
+        var elapsed = Date.now() - startTime;
+        if (elapsed < minLoadingTime) {
+          await new Promise(function(resolve) { setTimeout(resolve, minLoadingTime - elapsed); });
+        }
+      } catch (e) {
+        console.error("Action failed:", e);
+        alert(e.message || "An error occurred while processing your request.");
+      } finally {
+        restoreFn();
+      }
+    }
+  };
 
   document.addEventListener("DOMContentLoaded", function () {
     initSidebar();
