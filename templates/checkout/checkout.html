@@ -159,8 +159,18 @@
         {% for line in summary.lines %}
         <div class="d-flex align-items-center justify-content-between py-2 border-bottom gap-2">
           <div class="d-flex align-items-center gap-2 text-truncate" style="min-width: 0;">
-            {% with line.product.primary_images|first as primary_image %}
+            {% with variant_image=line.variant.variant_images|first %}
             <div class="flex-shrink-0 bg-light border rounded" style="width: 48px; height: 48px; overflow: hidden;">
+              {% if variant_image %}
+              <img src="{{ variant_image.image.url }}" alt="{{ line.product.name }}"
+                style="width: 100%; height: 100%; object-fit: cover;">
+              {% else %}
+              {% with common_image=line.product.common_images|first %}
+              {% if common_image %}
+              <img src="{{ common_image.image.url }}" alt="{{ line.product.name }}"
+                style="width: 100%; height: 100%; object-fit: cover;">
+              {% else %}
+              {% with line.product.primary_images|first as primary_image %}
               {% if primary_image %}
               <img src="{{ primary_image.image.url }}" alt="{{ line.product.name }}"
                 style="width: 100%; height: 100%; object-fit: cover;">
@@ -171,6 +181,10 @@
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <path d="M21 15l-5-5L5 21" />
               </svg>
+              {% endif %}
+              {% endwith %}
+              {% endif %}
+              {% endwith %}
               {% endif %}
             </div>
             {% endwith %}

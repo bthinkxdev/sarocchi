@@ -13,11 +13,23 @@
         {% for line in summary.lines %}
         <li class="cart-page-line d-flex gap-3 p-3{% if not forloop.last %} border-bottom{% endif %}">
           <div class="cart-line__img-wrap" style="width:80px;height:80px;">
+            {% with variant_image=line.variant.variant_images|first %}
+            {% if variant_image %}
+            <img src="{{ variant_image.image.url }}" alt="{{ line.product.name }}" class="cart-line__img" loading="lazy">
+            {% else %}
+            {% with common_image=line.product.common_images|first %}
+            {% if common_image %}
+            <img src="{{ common_image.image.url }}" alt="{{ line.product.name }}" class="cart-line__img" loading="lazy">
+            {% else %}
             {% with line.product.primary_images|first as primary_image %}
             {% if primary_image %}
             <img src="{{ primary_image.image.url }}" alt="{{ line.product.name }}" class="cart-line__img" loading="lazy">
             {% else %}
             <img src="{% static 'img/product-placeholder.svg' %}" alt="{{ line.product.name }}" class="cart-line__img cart-line__img--placeholder">
+            {% endif %}
+            {% endwith %}
+            {% endif %}
+            {% endwith %}
             {% endif %}
             {% endwith %}
           </div>

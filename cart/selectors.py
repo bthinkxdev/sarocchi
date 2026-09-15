@@ -209,6 +209,16 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
                 queryset=ProductImage.objects.filter(is_primary=True).order_by("display_order"),
                 to_attr="primary_images",
             ),
+            Prefetch(
+                "product__images",
+                queryset=ProductImage.objects.filter(variant__isnull=True).order_by("display_order"),
+                to_attr="common_images",
+            ),
+            Prefetch(
+                "variant__images",
+                queryset=ProductImage.objects.order_by("display_order"),
+                to_attr="variant_images",
+            ),
         )
         .order_by("id")
     )
