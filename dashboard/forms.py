@@ -92,6 +92,7 @@ class ProductForm(SlugAutoMixin):
         self.fields["size_chart"].queryset = qs.order_by("name")
         self.fields["size_chart"].empty_label = "No Size Chart"
         self.fields["slug"].required = False
+        self.fields["base_price"].required = False
         self.fields["mrp"].required = False
         self.fields["purchase_price"].required = False
         self.fields["stock_quantity"].required = False
@@ -106,6 +107,11 @@ class ProductForm(SlugAutoMixin):
 
     def clean(self):
         cleaned = super().clean()
+        has_variants = self.data.get("has_variants") == "on"
+        
+        if not has_variants and cleaned.get("base_price") is None:
+            self.add_error("base_price", "Base price is required for simple products.")
+            
         for field in ["base_price", "mrp", "purchase_price", "stock_quantity", "low_stock_threshold"]:
             if cleaned.get(field) is None:
                 cleaned[field] = 0
