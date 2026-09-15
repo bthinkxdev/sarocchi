@@ -279,23 +279,28 @@ def _apply_plp_sort(queryset: QuerySet[Product], sort: str) -> QuerySet[Product]
         "name": "name",
     }
     primary_sort = sort_map.get(sort, "-created_at")
-    return queryset.order_by(
-        Case(
-            When(homepage_featured__is_shown=True, then=Value(1)),
-            When(homepage_featured__is_shown=False, then=Value(-1)),
-            default=Value(0),
-            output_field=IntegerField()
-        ).desc(),
-        Case(
-            When(homepage_featured__is_shown=True, then=F("homepage_featured__updated_at")),
-            default=None
-        ).desc(nulls_last=True),
-        Case(
-            When(homepage_featured__is_shown=False, then=F("homepage_featured__updated_at")),
-            default=None
-        ).asc(nulls_last=True),
-        primary_sort
-    )
+    
+    #only apply pinned logic if the sort is default/newest
+    if sort in ("newest", "") or sort not in sort_map:
+        return queryset.order_by(
+            Case(
+                When(homepage_featured__is_shown=True, then=Value(1)),
+                When(homepage_featured__is_shown=False, then=Value(-1)),
+                default=Value(0),
+                output_field=IntegerField()
+            ).desc(),
+            Case(
+                When(homepage_featured__is_shown=True, then=F("homepage_featured__updated_at")),
+                default=None
+            ).desc(nulls_last=True),
+            Case(
+                When(homepage_featured__is_shown=False, then=F("homepage_featured__updated_at")),
+                default=None
+            ).asc(nulls_last=True),
+            primary_sort
+        )
+    
+    return queryset.order_by(primary_sort)
 
 
 def get_plp_products(
