@@ -249,6 +249,8 @@ def pdp_view(request: HttpRequest, slug: str) -> HttpResponse:
             "is_in_wishlist": is_in_wishlist,
             "related_products": get_related_products(product=product, user=request.user),
             "has_delivered_order": has_delivered_order,
+            "cities": __import__('delivery.models', fromlist=['City']).City.objects.filter(is_active=True).order_by('name'),
+            "default_estimated_delivery_text": site_settings.default_estimated_delivery_text,
             "product_json_ld": json.dumps(
                 build_product_json_ld(
                     product=product,

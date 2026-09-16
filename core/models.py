@@ -276,6 +276,31 @@ class SiteSettings(TimeStampedModel):
     default_language = models.CharField(max_length=5, default="en")
     tax_rate_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     cod_delivery_charge = models.DecimalField(max_digits=10, decimal_places=2, default=50, verbose_name="COD Delivery Charge")
+    
+    #generic shipping configuration
+    default_estimated_delivery_text = models.CharField(
+        max_length=255, 
+        blank=True,
+        default="Dispatch in 24 hours. Delivery in 2-5 Business Days.",
+        verbose_name="Default Estimated Delivery",
+        help_text="Shown on PDP and as fallback if city has no override."
+    )
+    default_shipping_charge = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0.00,
+        verbose_name="Default Shipping Charge",
+        help_text="Fallback flat shipping rate."
+    )
+    free_shipping_threshold = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True,
+        verbose_name="Free Shipping Threshold",
+        help_text="Orders over this amount get free shipping (leave blank for no free shipping)."
+    )
+    
     card_gateway_public_key_env = models.CharField(
         max_length=80,
         default="CARD_GATEWAY_PUBLIC_KEY",

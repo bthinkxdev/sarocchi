@@ -210,6 +210,7 @@ def place_order(
             adjust_stock(target=target, delta=-line.quantity, reason=f"order:{idempotency_key}")
 
     address_snapshot: dict[str, Any] = {}
+    estimated_delivery_text = ""
     if session.address_id:
         addr = session.address
         address_snapshot = {
@@ -223,6 +224,18 @@ def place_order(
             "state": getattr(addr, "state", "") or "",
             "pincode": getattr(addr, "pincode", "") or "",
         }
+        
+        #match city for estimated delivery text
+        from core.models import SiteSettings
+        from delivery.models import City
+        
+        settings = SiteSettings.objects.first()
+        estimated_delivery_text = settings.default_estimated_delivery_text if settings else ""
+        
+        if addr.city:
+            city = City.objects.filter(name__iexact=addr.city, is_active=True).first()
+            if city and city.estimated_delivery_text:
+                estimated_delivery_text = city.estimated_delivery_text
 
     initial_status = OrderStatus.PLACED_COD if gateway_key == "cod" else OrderStatus.CHECKOUT_PENDING
 
@@ -243,6 +256,7 @@ def place_order(
             total_amount=summary.grand_total,
             currency=session.cart.currency,
             delivery_address_snapshot=address_snapshot,
+            estimated_delivery_text=estimated_delivery_text,
             invoice_details=invoice_details,
         )
     except IntegrityError:

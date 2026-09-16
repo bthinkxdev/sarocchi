@@ -54,10 +54,18 @@ def checkout_update_delivery_charge_view(request: HttpRequest) -> HttpResponse:
     if gateway_key == "cod":
         from core.services import get_site_settings
         settings = get_site_settings()
-        cart.delivery_charge = settings.cod_delivery_charge
+        from delivery.selectors import get_delivery_charge
+        address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
+        #get subtotal from cart items
+        from cart.selectors import get_cart_summary
+        summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
+        cart.delivery_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=True)
     else:
-        from decimal import Decimal
-        cart.delivery_charge = Decimal("0.00")
+        from delivery.selectors import get_delivery_charge
+        address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
+        from cart.selectors import get_cart_summary
+        summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
+        cart.delivery_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=False)
         
     cart.save(update_fields=["delivery_charge", "updated_at"])
 
@@ -159,18 +167,24 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     from core.services import get_site_settings
     settings = get_site_settings()
         
+    from cart.selectors import get_cart_summary
+    summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
+    from delivery.selectors import get_delivery_charge
+    address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
+    
     if selected_gateway_key == "cod":
-        if cart.delivery_charge != settings.cod_delivery_charge:
-            cart.delivery_charge = settings.cod_delivery_charge
+        new_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=True)
+        if cart.delivery_charge != new_charge:
+            cart.delivery_charge = new_charge
             cart.save(update_fields=["delivery_charge", "updated_at"])
     else:
-        from decimal import Decimal
-        if cart.delivery_charge != Decimal("0.00"):
-            cart.delivery_charge = Decimal("0.00")
+        new_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=False)
+        if cart.delivery_charge != new_charge:
+            cart.delivery_charge = new_charge
             cart.save(update_fields=["delivery_charge", "updated_at"])
 
     #reload summary after potential delivery charge update
-    summary = get_cart_summary(cart=cart)
+    summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
 
     from core.models import State
     INDIAN_STATES = list(State.objects.filter(is_active=True).values_list('name', flat=True))
@@ -373,20 +387,24 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
         )
         
     gateway_key = form.cleaned_data["gateway_key"]
+    from cart.selectors import get_cart_summary
+    summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
+    from delivery.selectors import get_delivery_charge
+    address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
+    
     if gateway_key == "cod":
-        from core.services import get_site_settings
-        settings = get_site_settings()
-        if cart.delivery_charge != settings.cod_delivery_charge:
-            cart.delivery_charge = settings.cod_delivery_charge
+        new_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=True)
+        if cart.delivery_charge != new_charge:
+            cart.delivery_charge = new_charge
             cart.save(update_fields=["delivery_charge", "updated_at"])
     else:
-        from decimal import Decimal
-        if cart.delivery_charge != Decimal("0.00"):
-            cart.delivery_charge = Decimal("0.00")
+        new_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=False)
+        if cart.delivery_charge != new_charge:
+            cart.delivery_charge = new_charge
             cart.save(update_fields=["delivery_charge", "updated_at"])
 
     from cart.selectors import get_cart_summary
-    summary = get_cart_summary(cart=cart)
+    # summary is already retrieved on line 375 with skip_delivery_charge_calculation=True
     if summary.has_stock_issues:
         from django.utils.translation import gettext as _
         is_buy_now = request.session.get("checkout_mode") == "buy_now"

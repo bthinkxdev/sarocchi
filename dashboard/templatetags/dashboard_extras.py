@@ -42,10 +42,18 @@ _STATUS_PILL = {
     "checkout_pending": "pill-amber",
     "placed_cod": "pill-amber",
     "confirmed": "pill-blue",
+    
+    #generic
+    "processing": "pill-purple",
+    "shipped": "pill-indigo",
+    
+    #delhivery
     "ready_to_ship": "pill-blue",
     "picked_up": "pill-blue",
     "in_transit": "pill-blue",
     "out_for_delivery": "pill-blue",
+    
+    #shared
     "delivered": "pill-green",
     "cancelled": "pill-red",
     "refunded": "pill-red",

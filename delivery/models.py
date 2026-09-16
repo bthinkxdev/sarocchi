@@ -59,6 +59,12 @@ class City(TimeStampedModel):
         verbose_name="Base delivery charge",
         help_text="Default delivery fee for this city in the store currency.",
     )
+    estimated_delivery_text = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Estimated Delivery",
+        help_text="e.g. '1-2 Business Days'. Overrides the global default.",
+    )
     same_day_cutoff_hour = models.PositiveSmallIntegerField(
         default=14,
         verbose_name="Same-day cutoff hour",

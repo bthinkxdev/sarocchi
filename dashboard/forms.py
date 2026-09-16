@@ -179,6 +179,26 @@ class SizeChartForm(forms.ModelForm):
         self.fields["content_html"].widget.attrs["style"] = "visibility: hidden; height: 300px;"
 
 
+from delivery.models import City, Country
+
+class CityForm(SlugAutoMixin):
+    class Meta:
+        model = City
+        fields = [
+            "country",
+            "name",
+            "slug",
+            "delivery_charge_base",
+            "estimated_delivery_text",
+            "same_day_cutoff_hour",
+            "is_active",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["slug"].required = False
+
+
 class ReviewForm(forms.ModelForm):
     class Meta:
         model = Review
@@ -567,6 +587,9 @@ class SiteSettingsForm(forms.ModelForm):
         "notify_enquiry",
         "tax_rate_percent",
         "cod_delivery_charge",
+        "default_shipping_charge",
+        "free_shipping_threshold",
+        "default_estimated_delivery_text",
         "default_currency",
         "razorpay_key_id",
         "razorpay_key_secret",
@@ -589,6 +612,9 @@ class SiteSettingsForm(forms.ModelForm):
         "notify_enquiry",
         "tax_rate_percent",
         "cod_delivery_charge",
+        "default_shipping_charge",
+        "free_shipping_threshold",
+        "default_estimated_delivery_text",
         "google_analytics_id",
         "meta_pixel_id",
         "razorpay_key_id",
@@ -614,6 +640,9 @@ class SiteSettingsForm(forms.ModelForm):
             "notify_enquiry",
             "tax_rate_percent",
             "cod_delivery_charge",
+            "default_shipping_charge",
+            "free_shipping_threshold",
+            "default_estimated_delivery_text",
             "google_analytics_id",
             "meta_pixel_id",
             "razorpay_key_id",

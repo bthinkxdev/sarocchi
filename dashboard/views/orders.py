@@ -11,7 +11,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from dashboard.access import dashboard_required
 from orders.exceptions import InvalidOrderStatusTransitionError
 from orders.models import Order, OrderStatus
-from orders.services import ALLOWED_STATUS_TRANSITIONS, transition_order_status
+from orders.services import get_allowed_status_transitions, transition_order_status
 
 _STATUS_LABELS = dict(OrderStatus.choices)
 
@@ -123,11 +123,15 @@ def order_detail(request: HttpRequest, pk: int) -> HttpResponse:
 
     #only the actually-valid next statuses — CONFIRMED is the sole trigger for AWB
     #creation, so an admin must never be able to pick an arbitrary status here.
-    next_statuses = ALLOWED_STATUS_TRANSITIONS.get(order.order_status, set())
+    next_statuses = get_allowed_status_transitions().get(order.order_status, set())
     allowed_choices = [(value, _STATUS_LABELS[value]) for value in next_statuses]
     from payments.models import PaymentStatus
     payment_statuses = PaymentStatus.choices
 
+    from core.models import SiteSettings
+    settings = SiteSettings.objects.first()
+    enable_delhivery = settings.enable_delhivery if settings else True
+    
     context = {
         "nav_section": "orders",
         "page_title": f"Order {order.order_number}",
@@ -138,6 +142,7 @@ def order_detail(request: HttpRequest, pk: int) -> HttpResponse:
         "pod": pod,
         "allowed_choices": allowed_choices,
         "payment_statuses": payment_statuses,
+        "ENABLE_DELHIVERY": enable_delhivery,
     }
     return render(request, "dashboard/orders/detail.html", context)
 
@@ -233,22 +238,39 @@ def order_bulk_invoice_detail(request: HttpRequest) -> HttpResponse:
 @require_POST
 def order_tracking_update(request: HttpRequest, pk: int) -> HttpResponse:
     """Manually update or create the tracking ID (waybill number)."""
-    from delhivery.models import DelhiveryShipment
-    
     order = get_object_or_404(Order, pk=pk)
-    waybill_number = request.POST.get("waybill_number", "").strip()
     
-    if waybill_number:
-        shipment, created = DelhiveryShipment.objects.get_or_create(order=order)
-        shipment.waybill_number = waybill_number
-        if created:
-            shipment.tracking_status = "Initiated"
-        shipment.save(update_fields=["waybill_number", "tracking_status", "updated_at"] if not created else None)
-        messages.success(request, f"Tracking ID saved: {waybill_number}")
+    from core.models import SiteSettings
+    settings = SiteSettings.objects.first()
+    enable_delhivery = settings.enable_delhivery if settings else True
+    
+    if enable_delhivery:
+        from delhivery.models import DelhiveryShipment
+        waybill_number = request.POST.get("waybill_number", "").strip()
+        
+        if waybill_number:
+            shipment, created = DelhiveryShipment.objects.get_or_create(order=order)
+            shipment.waybill_number = waybill_number
+            if created:
+                shipment.tracking_status = "Initiated"
+            shipment.save(update_fields=["waybill_number", "tracking_status", "updated_at"] if not created else None)
+            messages.success(request, f"Tracking ID saved: {waybill_number}")
+        else:
+            if hasattr(order, 'delhivery_shipment'):
+                order.delhivery_shipment.waybill_number = None
+                order.delhivery_shipment.save(update_fields=["waybill_number", "updated_at"])
+                messages.info(request, "Tracking ID cleared.")
     else:
-        if hasattr(order, 'delhivery_shipment'):
-            order.delhivery_shipment.waybill_number = None
-            order.delhivery_shipment.save(update_fields=["waybill_number", "updated_at"])
-            messages.info(request, "Tracking ID cleared.")
+        tracking_number = request.POST.get("tracking_number", "").strip()
+        shipping_provider = request.POST.get("shipping_provider", "").strip()
+        
+        order.tracking_number = tracking_number
+        order.shipping_provider = shipping_provider
+        order.save(update_fields=["tracking_number", "shipping_provider", "updated_at"])
+        
+        if tracking_number or shipping_provider:
+            messages.success(request, "Tracking information updated.")
+        else:
+            messages.info(request, "Tracking information cleared.")
             
     return redirect("dashboard:order-detail", pk=pk)

@@ -19,18 +19,48 @@ from orders.signals import order_status_changed
 #this map — PICKED_UP / IN_TRANSIT / OUT_FOR_DELIVERY / DELIVERED are reachable only
 #through the webhook, never listed here, so an admin can never select them from the
 #dashboard's transition dropdown (which is built from this same map).
-ALLOWED_STATUS_TRANSITIONS: dict[str, set[str]] = {
-    OrderStatus.CHECKOUT_PENDING: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
-    OrderStatus.PLACED_COD: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
-    OrderStatus.CONFIRMED: {OrderStatus.READY_TO_SHIP, OrderStatus.CANCELLED},
-    OrderStatus.READY_TO_SHIP: {OrderStatus.CANCELLED},
-    OrderStatus.PICKED_UP: set(),
-    OrderStatus.IN_TRANSIT: set(),
-    OrderStatus.OUT_FOR_DELIVERY: set(),
-    OrderStatus.DELIVERED: {OrderStatus.REFUNDED},
-    OrderStatus.CANCELLED: {OrderStatus.REFUNDED},
-    OrderStatus.REFUNDED: set(),
-}
+def get_allowed_status_transitions() -> dict[str, set[str]]:
+    transitions = {
+        OrderStatus.CHECKOUT_PENDING: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
+        OrderStatus.PLACED_COD: {OrderStatus.CONFIRMED, OrderStatus.CANCELLED},
+        OrderStatus.CONFIRMED: {OrderStatus.READY_TO_SHIP, OrderStatus.PROCESSING, OrderStatus.CANCELLED},
+        
+        #delhivery flow
+        OrderStatus.READY_TO_SHIP: {OrderStatus.CANCELLED},
+        OrderStatus.PICKED_UP: set(),
+        OrderStatus.IN_TRANSIT: set(),
+        OrderStatus.OUT_FOR_DELIVERY: set(),
+        
+        #generic flow
+        OrderStatus.PROCESSING: {OrderStatus.SHIPPED, OrderStatus.CANCELLED},
+        OrderStatus.SHIPPED: {OrderStatus.DELIVERED, OrderStatus.CANCELLED},
+        
+        #shared
+        OrderStatus.DELIVERED: {OrderStatus.REFUNDED},
+        OrderStatus.CANCELLED: {OrderStatus.REFUNDED},
+        OrderStatus.REFUNDED: set(),
+    }
+    
+    try:
+        from core.models import SiteSettings
+        settings = SiteSettings.objects.first()
+        enable_delhivery = settings.enable_delhivery if settings else True
+    except Exception:
+        enable_delhivery = True
+        
+    if enable_delhivery:
+        #hide generic manual transitions from UI if delhivery is active
+        transitions[OrderStatus.CONFIRMED].discard(OrderStatus.PROCESSING)
+    else:
+        #hide delhivery manual transitions from UI if generic is active
+        transitions[OrderStatus.CONFIRMED].discard(OrderStatus.READY_TO_SHIP)
+        #fallback manual transitions if needed
+        transitions[OrderStatus.READY_TO_SHIP].update({OrderStatus.PICKED_UP, OrderStatus.IN_TRANSIT})
+        transitions[OrderStatus.PICKED_UP].update({OrderStatus.IN_TRANSIT})
+        transitions[OrderStatus.IN_TRANSIT].update({OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED})
+        transitions[OrderStatus.OUT_FOR_DELIVERY].add(OrderStatus.DELIVERED)
+        
+    return transitions
 
 #Fulfillment rank used by the Delhivery webhook to reject out-of-order/backward scan
 #events (e.g. a stale "in transit" push arriving after "delivered" already landed).
@@ -38,8 +68,10 @@ ALLOWED_STATUS_TRANSITIONS: dict[str, set[str]] = {
 #RTO/cancel can legitimately happen from any rank.
 ORDER_STATUS_RANK: dict[str, int] = {
     OrderStatus.CONFIRMED: 1,
+    OrderStatus.PROCESSING: 2,
     OrderStatus.READY_TO_SHIP: 2,
     OrderStatus.PICKED_UP: 3,
+    OrderStatus.SHIPPED: 4,
     OrderStatus.IN_TRANSIT: 4,
     OrderStatus.OUT_FOR_DELIVERY: 5,
     OrderStatus.DELIVERED: 6,
@@ -98,7 +130,7 @@ def transition_order_status(
         return order
 
     if not force:
-        allowed = ALLOWED_STATUS_TRANSITIONS.get(old_status, set())
+        allowed = get_allowed_status_transitions().get(old_status, set())
         if new_status not in allowed:
             raise InvalidOrderStatusTransitionError(
                 f"Cannot transition order from {old_status} to {new_status}."

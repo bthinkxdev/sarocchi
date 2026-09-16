@@ -62,6 +62,17 @@ urlpatterns = [
     path("payment/", misc.payment_list, name="payment-list"),
 ]
 
+from dashboard.views import delivery
+
+urlpatterns += _crud(
+    "city",
+    delivery.CityListView,
+    delivery.CityCreateView,
+    delivery.CityUpdateView,
+    delivery.CityDeleteView,
+)
+
+
 urlpatterns += _crud(
     "collection",
     catalog.CollectionListView,

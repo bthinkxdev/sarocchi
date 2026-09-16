@@ -23,10 +23,18 @@ class OrderStatus(models.TextChoices):
     CHECKOUT_PENDING = "checkout_pending", "Payment Pending"
     PLACED_COD = "placed_cod", "COD Awaiting Confirmation"
     CONFIRMED = "confirmed", "Confirmed"
+    
+    #generic shipping
+    PROCESSING = "processing", "Processing"
+    SHIPPED = "shipped", "Shipped"
+    
+    #delhivery specific
     READY_TO_SHIP = "ready_to_ship", "Ready to Ship"
     PICKED_UP = "picked_up", "Picked Up"
     IN_TRANSIT = "in_transit", "In Transit"
     OUT_FOR_DELIVERY = "out_for_delivery", "Out for Delivery"
+    
+    #shared
     DELIVERED = "delivered", "Delivered"
     CANCELLED = "cancelled", "Cancelled"
     REFUNDED = "refunded", "Refunded"
@@ -106,6 +114,24 @@ class Order(TimeStampedModel):
     delivery_address_snapshot = models.JSONField(
         default=dict,
         verbose_name="Delivery address snapshot",
+    )
+    estimated_delivery_text = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Estimated Delivery Text",
+        help_text="Snapshot of the delivery estimate at the time of order.",
+    )
+    tracking_number = models.CharField(
+        max_length=120,
+        blank=True,
+        verbose_name="Tracking Number",
+        help_text="Manual or gateway tracking number for the shipment.",
+    )
+    shipping_provider = models.CharField(
+        max_length=120,
+        blank=True,
+        verbose_name="Shipping Provider",
+        help_text="Name of the courier or shipping service.",
     )
     invoice_details = models.JSONField(default=dict, verbose_name="Invoice details")
 
