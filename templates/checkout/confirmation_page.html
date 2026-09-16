@@ -83,4 +83,35 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var orderNumber = '{{ order.order_number|escapejs }}';
+    var hasFired = sessionStorage.getItem('purchase_fired_' + orderNumber);
+    
+    if (!hasFired && orderNumber) {
+      var value = {{ order.total_amount|default:0 }};
+      var currency = '{{ order.currency.code|default:"NZD" }}';
+      
+      //google analytics 4
+      if (typeof gtag === 'function') {
+        gtag('event', 'purchase', {
+          transaction_id: orderNumber,
+          currency: currency,
+          value: value
+        });
+      }
+
+      //meta pixel
+      if (typeof fbq === 'function') {
+        fbq('track', 'Purchase', {
+          value: value,
+          currency: currency
+        });
+      }
+      
+      sessionStorage.setItem('purchase_fired_' + orderNumber, 'true');
+    }
+  });
+</script>
 {% endblock %}

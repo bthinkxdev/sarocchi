@@ -218,6 +218,18 @@ class SiteSettings(TimeStampedModel):
     instagram_url = models.URLField(blank=True)
     twitter_url = models.URLField(blank=True)
     whatsapp_number = models.CharField(max_length=20, blank=True)
+    google_analytics_id = models.CharField(
+        max_length=50, 
+        blank=True,
+        verbose_name="Google Analytics ID",
+        help_text="GA4 Measurement ID (e.g. G-XXXXXXXXXX)"
+    )
+    meta_pixel_id = models.CharField(
+        max_length=50, 
+        blank=True,
+        verbose_name="Meta Pixel ID",
+        help_text="Meta Pixel ID (e.g. 1234567890)"
+    )
     vendor_email = models.EmailField(
         blank=True,
         verbose_name="Vendor Email",

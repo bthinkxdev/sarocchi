@@ -494,4 +494,42 @@
 
 {% block extra_js %}
 <script src="{% static 'js/pdp.js' %}?v=6"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    //analytics: view_item & ViewContent
+    var item_id = '{{ product.pk }}';
+    var item_name = '{{ product.name|escapejs }}';
+    var item_price = {{ price_data.price|default:0 }};
+    var currency = '{{ display_currency.code|default:"NZD" }}';
+    var category = '{{ product.category.name|escapejs }}';
+
+    //google analytics 4
+    if (typeof gtag === 'function') {
+      gtag('event', 'view_item', {
+        currency: currency,
+        value: item_price,
+        items: [
+          {
+            item_id: item_id,
+            item_name: item_name,
+            item_category: category,
+            price: item_price,
+            quantity: 1
+          }
+        ]
+      });
+    }
+
+    //meta pixel
+    if (typeof fbq === 'function') {
+      fbq('track', 'ViewContent', {
+        content_ids: [item_id],
+        content_name: item_name,
+        content_type: 'product',
+        value: item_price,
+        currency: currency
+      });
+    }
+  });
+</script>
 {% endblock %}

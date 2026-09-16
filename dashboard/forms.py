@@ -584,6 +584,8 @@ class SiteSettingsForm(forms.ModelForm):
         "notify_enquiry",
         "tax_rate_percent",
         "cod_delivery_charge",
+        "google_analytics_id",
+        "meta_pixel_id",
         "razorpay_key_id",
         "razorpay_key_secret",
     ]
@@ -607,6 +609,8 @@ class SiteSettingsForm(forms.ModelForm):
             "notify_enquiry",
             "tax_rate_percent",
             "cod_delivery_charge",
+            "google_analytics_id",
+            "meta_pixel_id",
             "razorpay_key_id",
             "razorpay_key_secret",
         ]

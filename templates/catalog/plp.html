@@ -46,3 +46,27 @@
   </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+{% if filters.q %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var query = '{{ filters.q|escapejs }}';
+    
+    //google analytics 4
+    if (typeof gtag === 'function') {
+      gtag('event', 'search', {
+        search_term: query
+      });
+    }
+
+    //meta pixel
+    if (typeof fbq === 'function') {
+      fbq('track', 'Search', {
+        search_string: query
+      });
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}

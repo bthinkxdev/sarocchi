@@ -1737,3 +1737,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 })();
+
+document.body.addEventListener('cartItemAdded', function(event) {
+  var data = event.detail.analytics;
+  if (!data) return;
+
+  //google analytics 4
+  if (typeof gtag === 'function') {
+    gtag('event', 'add_to_cart', {
+      currency: 'NZD',
+      value: data.price,
+      items: [
+        {
+          item_id: data.item_id,
+          item_name: data.item_name,
+          price: data.price,
+          quantity: 1
+        }
+      ]
+    });
+  }
+
+  //meta pixel
+  if (typeof fbq === 'function') {
+    fbq('track', 'AddToCart', {
+      content_ids: [data.item_id],
+      content_name: data.item_name,
+      content_type: 'product',
+      value: data.price,
+      currency: 'NZD'
+    });
+  }
+});

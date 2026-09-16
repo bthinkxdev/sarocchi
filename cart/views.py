@@ -200,9 +200,20 @@ def cart_add_view(request: HttpRequest) -> HttpResponse:
             return response
         return redirect("checkout:checkout")
 
+    price_val = float(variant.base_price if variant and variant.base_price else product.base_price)
     return _cart_drawer_response(
         request,
-        hx_triggers={"cartItemAdded": {"product_id": product.pk, "variant_id": variant.pk if variant else None}},
+        hx_triggers={
+            "cartItemAdded": {
+                "product_id": product.pk, 
+                "variant_id": variant.pk if variant else None,
+                "analytics": {
+                    "item_id": str(product.pk),
+                    "item_name": product.name,
+                    "price": price_val,
+                }
+            }
+        },
     )
 
 
