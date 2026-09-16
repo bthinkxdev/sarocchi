@@ -38,6 +38,7 @@
       </select>
     </div>
 
+    {% if site_settings.enable_brands %}
     <div class="mb-3">
       <label class="form-label small">{% trans "Brand" %}</label>
       <select name="brand" class="form-select form-select-sm">
@@ -47,6 +48,7 @@
         {% endfor %}
       </select>
     </div>
+    {% endif %}
     <div class="mb-3">
       <label class="form-label small">{% trans "Collection" %}</label>
       <select name="collection" class="form-select form-select-sm">

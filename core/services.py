@@ -11,13 +11,18 @@ from core.models import Currency, SiteSettings
 SITE_SETTINGS_PK = 1
 
 
+from django.core.cache import cache
+
 def get_site_settings() -> SiteSettings:
     """
     Return the singleton SiteSettings row (pk=1 pattern).
 
     Enforces a single configuration row — admins edit this instance only.
     """
-    settings, _ = SiteSettings.objects.get_or_create(pk=SITE_SETTINGS_PK)
+    settings = cache.get("site_settings_singleton")
+    if not settings:
+        settings, _ = SiteSettings.objects.get_or_create(pk=SITE_SETTINGS_PK)
+        cache.set("site_settings_singleton", settings, timeout=86400)
     return settings
 
 

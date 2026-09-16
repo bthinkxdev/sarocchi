@@ -225,7 +225,9 @@
             <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.sku %}</div>
             <div class="col-md-6">{% include "dashboard/partials/_field.html" with field=form.slug %}</div>
             <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.category %}</div>
+            {% if site_settings.enable_brands %}
             <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.brand %}</div>
+            {% endif %}
             <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.size_chart %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.base_price %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.mrp %}</div>

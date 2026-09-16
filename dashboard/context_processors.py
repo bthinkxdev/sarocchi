@@ -24,7 +24,9 @@ def dashboard_chrome(request: HttpRequest) -> dict:
         Notification.objects.filter(user=user, is_read=False).order_by("-created_at")[:50]
     )
     unread_count = Notification.objects.filter(user=user, is_read=False).count()
+    from core.services import get_site_settings
     return {
         "dashboard_notifications": notifications,
         "dashboard_unread_count": unread_count,
+        "site_settings": get_site_settings(),
     }

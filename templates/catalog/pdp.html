@@ -23,7 +23,7 @@
 
     <div class="col-lg-6 jm-pdp-buybox pdp-info">
       <p class="jm-pdp-buybox__meta pdp-meta">
-        {{ product.category.name }}{% if product.brand %} · {{ product.brand.name }}{% endif %}
+        {{ product.category.name }}{% if site_settings.enable_brands %}{% if product.brand %} · {{ product.brand.name }}{% endif %}{% endif %}
       </p>
       <h1 class="jm-pdp-buybox__title">{{ product.name }}</h1>
       <p class="text-muted small mb-3" id="pdp-sku-display">SKU: {% if product.variant_list %}{% if target_variant %}{{ target_variant.sku_suffix }}{% else %}{{ product.variant_list.0.sku_suffix }}{% endif %}{% else %}{{ product.sku }}{% endif %}</p>

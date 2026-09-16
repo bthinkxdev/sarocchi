@@ -6,6 +6,7 @@ from typing import Any
 
 from django.db import models
 from django.utils import timezone
+from django.core.cache import cache
 
 
 class TimeStampedModel(models.Model):
@@ -214,6 +215,16 @@ class SiteSettings(TimeStampedModel):
     primary_color = models.CharField(max_length=7, default="#0369A1")
     secondary_color = models.CharField(max_length=7, default="#0B1220")
     font_family = models.CharField(max_length=120, default="Inter, sans-serif")
+    enable_brands = models.BooleanField(
+        default=True,
+        verbose_name="Enable Brands",
+        help_text="Enable or disable Brand features across the entire site."
+    )
+    enable_delhivery = models.BooleanField(
+        default=True,
+        verbose_name="Enable Delhivery",
+        help_text="Enable or disable Delhivery shipping integration across the site."
+    )
     facebook_url = models.URLField(blank=True)
     instagram_url = models.URLField(blank=True)
     twitter_url = models.URLField(blank=True)
@@ -300,6 +311,7 @@ class SiteSettings(TimeStampedModel):
     def save(self, *args, **kwargs) -> None:
         self.pk = 1
         super().save(*args, **kwargs)
+        cache.delete("site_settings_singleton")
 
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         raise RuntimeError("SiteSettings singleton cannot be deleted.")

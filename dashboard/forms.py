@@ -98,6 +98,11 @@ class ProductForm(SlugAutoMixin):
         self.fields["stock_quantity"].required = False
         self.fields["low_stock_threshold"].required = False
         self.fields["collections"].required = False
+
+        from core.services import get_site_settings
+        site_settings = get_site_settings()
+        if not site_settings.enable_brands and "brand" in self.fields:
+            del self.fields["brand"]
         self.fields["tags"].required = False
         self.fields["labels"].required = False
         
