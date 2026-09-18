@@ -73,14 +73,21 @@ class ProductForm(SlugAutoMixin):
             "width",
             "height",
         ]
+        widgets = {
+            "base_price": forms.NumberInput(attrs={"min": "0"}),
+            "mrp": forms.NumberInput(attrs={"min": "0"}),
+            "purchase_price": forms.NumberInput(attrs={"min": "0"}),
+            "stock_quantity": forms.NumberInput(attrs={"min": "0"}),
+            "low_stock_threshold": forms.NumberInput(attrs={"min": "0"}),
+        }
         error_messages = {
             "name": {"required": "Product name is required."},
             "sku": {"required": "SKU is required."},
             "category": {"required": "Category is required."},
-            "base_price": {"required": "Base price is required."},
-            "mrp": {"required": "MRP is required."},
-            "purchase_price": {"required": "Purchase price is required."},
-            "stock_quantity": {"required": "Stock quantity is required."},
+            "base_price": {"required": "Base price is required.", "min_value": "Base price cannot be negative."},
+            "mrp": {"required": "MRP is required.", "min_value": "MRP cannot be negative."},
+            "purchase_price": {"required": "Purchase price is required.", "min_value": "Purchase price cannot be negative."},
+            "stock_quantity": {"required": "Stock quantity is required.", "min_value": "Stock quantity cannot be negative."},
         }
 
     def __init__(self, *args, **kwargs):
@@ -118,8 +125,11 @@ class ProductForm(SlugAutoMixin):
             self.add_error("base_price", "Base price is required for simple products.")
             
         for field in ["base_price", "mrp", "purchase_price", "stock_quantity", "low_stock_threshold"]:
-            if cleaned.get(field) is None:
+            val = cleaned.get(field)
+            if val is None:
                 cleaned[field] = 0
+            elif val < 0:
+                self.add_error(field, f"{field.replace('_', ' ').capitalize()} cannot be negative.")
         return cleaned
 
 
@@ -215,15 +225,20 @@ class ProductVariantForm(forms.ModelForm):
                 "class": "form-control",
                 "placeholder": "e.g. Size, Packaging, Color"
             }),
+            "base_price": forms.NumberInput(attrs={"min": "0"}),
+            "mrp": forms.NumberInput(attrs={"min": "0"}),
+            "purchase_price": forms.NumberInput(attrs={"min": "0"}),
+            "stock_quantity": forms.NumberInput(attrs={"min": "0"}),
+            "low_stock_threshold": forms.NumberInput(attrs={"min": "0"}),
         }
         error_messages = {
             "variant_type": {"required": "Variant type is required."},
             "name": {"required": "Name is required."},
-            "base_price": {"required": "Base price is required."},
-            "mrp": {"required": "MRP is required."},
-            "purchase_price": {"required": "Purchase price is required."},
-            "stock_quantity": {"required": "Stock quantity is required."},
-            "low_stock_threshold": {"required": "Low stock threshold is required."},
+            "base_price": {"required": "Base price is required.", "min_value": "Base price cannot be negative."},
+            "mrp": {"required": "MRP is required.", "min_value": "MRP cannot be negative."},
+            "purchase_price": {"required": "Purchase price is required.", "min_value": "Purchase price cannot be negative."},
+            "stock_quantity": {"required": "Stock quantity is required.", "min_value": "Stock quantity cannot be negative."},
+            "low_stock_threshold": {"required": "Low stock threshold is required.", "min_value": "Low stock threshold cannot be negative."},
         }
 
     def has_changed(self):

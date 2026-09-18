@@ -307,22 +307,22 @@
                     <input type="hidden" name="variant_dynamic_attributes[]" value="{{ variant.post_attr_string }}">
                   </td>
                   <td data-label="Base Price">
-                    <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_base_price[]" value="{{ variant.base_price }}">
+                    <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_base_price[]" value="{{ variant.base_price }}">
                   </td>
                   <td data-label="MRP">
-                    <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_mrp[]" value="{{ variant.mrp }}">
+                    <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_mrp[]" value="{{ variant.mrp }}">
                   </td>
                   <td data-label="Purchase Price">
-                    <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="{{ variant.purchase_price }}">
+                    <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="{{ variant.purchase_price }}">
                   </td>
                   <td data-label="SKU Suffix">
                     <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="{{ variant.sku_suffix }}" readonly>
                   </td>
                   <td data-label="Stock">
-                    <input type="number" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="{{ variant.stock_quantity }}">
+                    <input type="number" min="0" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="{{ variant.stock_quantity }}">
                   </td>
                   <td data-label="Threshold">
-                    <input type="number" class="form-control form-control-sm w-100" name="variant_low_stock_threshold[]" value="{{ variant.low_stock_threshold }}">
+                    <input type="number" min="0" class="form-control form-control-sm w-100" name="variant_low_stock_threshold[]" value="{{ variant.low_stock_threshold }}">
                   </td>
                   <td class="d-none d-md-table-cell text-center">
                     <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn mt-2 mt-md-0 w-100 w-md-auto"><i class="ti ti-trash"></i></button>
@@ -857,22 +857,22 @@ document.addEventListener("DOMContentLoaded", function() {
               <input type="hidden" name="variant_dynamic_attributes[]" value="${attrStrings}">
             </td>
             <td data-label="Base Price">
-              <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_base_price[]" value="" required>
+              <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_base_price[]" value="" required>
             </td>
             <td data-label="MRP">
-              <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_mrp[]" value="" required>
+              <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_mrp[]" value="" required>
             </td>
             <td data-label="Purchase Price">
-              <input type="number" step="0.01" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="" required>
+              <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="" required>
             </td>
             <td data-label="Variant SKU">
               <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="${fullSku}" required readonly>
             </td>
             <td data-label="Stock">
-              <input type="number" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="0" required>
+              <input type="number" min="0" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="0" required>
             </td>
             <td data-label="Threshold">
-              <input type="number" class="form-control form-control-sm w-100" name="variant_low_stock_threshold[]" value="5" required>
+              <input type="number" min="0" class="form-control form-control-sm w-100" name="variant_low_stock_threshold[]" value="5" required>
             </td>
             <td class="d-none d-md-table-cell text-center">
               <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn mt-2 mt-md-0 w-100 w-md-auto"><i class="ti ti-trash"></i></button>
