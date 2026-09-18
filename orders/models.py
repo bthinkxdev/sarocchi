@@ -133,6 +133,11 @@ class Order(TimeStampedModel):
         verbose_name="Shipping Provider",
         help_text="Name of the courier or shipping service.",
     )
+    shipping_provider_url = models.URLField(
+        blank=True,
+        verbose_name="Shipping Provider URL",
+        help_text="URL for tracking the shipment.",
+    )
     invoice_details = models.JSONField(default=dict, verbose_name="Invoice details")
 
     class Meta:

@@ -14,7 +14,7 @@
     <strong class="text-floward">{{ order.get_order_status_display }}</strong>
   </p>
 
-  {% if order.estimated_delivery_text or order.shipping_provider or order.tracking_number %}
+  {% if order.estimated_delivery_text or order.shipping_provider or order.tracking_number or order.shipping_provider_url %}
   <div class="checkout-step mb-4">
     <h2 class="h6 mb-2">{% trans "Delivery Details" %}</h2>
     
@@ -24,7 +24,7 @@
     </p>
     {% endif %}
 
-    {% if order.shipping_provider or order.tracking_number %}
+    {% if order.shipping_provider or order.tracking_number or order.shipping_provider_url %}
     <div class="mt-3 p-3 bg-light rounded border">
       <h3 class="h6 mb-2 text-primary">{% trans "Tracking Information" %}</h3>
       {% if order.shipping_provider %}
@@ -32,6 +32,13 @@
       {% endif %}
       {% if order.tracking_number %}
       <p class="small mb-0"><strong>{% trans "Tracking Number" %}:</strong> <span class="text-dark fw-medium">{{ order.tracking_number }}</span></p>
+      {% endif %}
+      {% if order.shipping_provider_url %}
+      <div class="mt-2">
+        <a href="{{ order.shipping_provider_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+          <i class="ti ti-external-link"></i> {% trans "Track Package" %}
+        </a>
+      </div>
       {% endif %}
     </div>
     {% endif %}

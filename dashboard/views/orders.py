@@ -263,12 +263,14 @@ def order_tracking_update(request: HttpRequest, pk: int) -> HttpResponse:
     else:
         tracking_number = request.POST.get("tracking_number", "").strip()
         shipping_provider = request.POST.get("shipping_provider", "").strip()
+        shipping_provider_url = request.POST.get("shipping_provider_url", "").strip()
         
         order.tracking_number = tracking_number
         order.shipping_provider = shipping_provider
-        order.save(update_fields=["tracking_number", "shipping_provider", "updated_at"])
+        order.shipping_provider_url = shipping_provider_url
+        order.save(update_fields=["tracking_number", "shipping_provider", "shipping_provider_url", "updated_at"])
         
-        if tracking_number or shipping_provider:
+        if tracking_number or shipping_provider or shipping_provider_url:
             messages.success(request, "Tracking information updated.")
         else:
             messages.info(request, "Tracking information cleared.")
