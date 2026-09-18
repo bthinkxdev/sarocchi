@@ -98,6 +98,18 @@ class ProductForm(SlugAutoMixin):
             qs = SizeChart.objects.filter(Q(is_active=True) | Q(pk=self.instance.size_chart_id))
         self.fields["size_chart"].queryset = qs.order_by("name")
         self.fields["size_chart"].empty_label = "No Size Chart"
+        
+        qs_cat = Category.objects.filter(is_active=True)
+        if self.instance and self.instance.pk and self.instance.category_id:
+            qs_cat = Category.objects.filter(Q(is_active=True) | Q(pk=self.instance.category_id))
+        self.fields["category"].queryset = qs_cat.order_by("name")
+        self.fields["category"].empty_label = "Select Category"
+
+        qs_col = Collection.objects.filter(is_active=True)
+        if self.instance and self.instance.pk:
+            qs_col = qs_col | self.instance.collections.all()
+        self.fields["collections"].queryset = qs_col.distinct().order_by("name")
+        
         self.fields["slug"].required = False
         self.fields["base_price"].required = False
         self.fields["mrp"].required = False

@@ -384,6 +384,9 @@ def _render_product_form(request, product, mode):
                 else:
                     messages.success(request, f"Product '{product.name}' saved successfully.")
                     
+                next_url = request.GET.get("next")
+                if next_url:
+                    return redirect(next_url)
                 return redirect("dashboard:product-list")
 
     else:
@@ -509,7 +512,7 @@ def _render_product_form(request, product, mode):
         "has_existing_variants": has_existing_variants,
         "existing_variants": existing_variants,
         "dynamic_options_list": dynamic_options_list,
-        "cancel_url": reverse("dashboard:product-list"),
+        "cancel_url": request.GET.get("next") or reverse("dashboard:product-list"),
     }
     
     return render(request, "dashboard/catalog/product_form.html", context)
