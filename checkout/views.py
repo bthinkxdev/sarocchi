@@ -57,13 +57,11 @@ def checkout_update_delivery_charge_view(request: HttpRequest) -> HttpResponse:
         from delivery.selectors import get_delivery_charge
         address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
         #get subtotal from cart items
-        from cart.selectors import get_cart_summary
         summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
         cart.delivery_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=True)
     else:
         from delivery.selectors import get_delivery_charge
         address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
-        from cart.selectors import get_cart_summary
         summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
         cart.delivery_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=False)
         
@@ -167,7 +165,6 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     from core.services import get_site_settings
     settings = get_site_settings()
         
-    from cart.selectors import get_cart_summary
     summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
     from delivery.selectors import get_delivery_charge
     address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
@@ -278,6 +275,7 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
         guest_address_line2 = request.POST.get("guest_address_line2", "").strip()
         guest_city = request.POST.get("guest_city", "").strip()
         guest_state = request.POST.get("guest_state", "").strip()
+        guest_country = request.POST.get("guest_country", "").strip()
         guest_pincode = request.POST.get("guest_pincode", "").strip()
 
         if not guest_address_line1:
@@ -306,6 +304,11 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             errors["guest_state"] = ["State cannot consist of special characters only."]
         elif not re.search(r"[a-zA-Z]", guest_state):
             errors["guest_state"] = ["Enter a valid state containing letters."]
+
+        if not guest_country:
+            errors["guest_country"] = ["Country Code is required."]
+        elif not re.fullmatch(r"^[a-zA-Z]{2}$", guest_country):
+            errors["guest_country"] = ["Country must be exactly a 2-letter code (e.g. NZ)."]
 
         if not guest_pincode:
             errors["guest_pincode"] = ["PIN / Postal Code is required."]
@@ -359,14 +362,16 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
                 line2=guest_address_line2,
                 city=guest_city,
                 state=guest_state,
+                country=guest_country,
                 pincode=guest_pincode,
                 label="Delivery Address"
             )
         elif address and profile:
-            if getattr(address, "state", "") != guest_state or getattr(address, "pincode", "") != guest_pincode:
+            if getattr(address, "state", "") != guest_state or getattr(address, "country", "") != guest_country or getattr(address, "pincode", "") != guest_pincode:
                 address.state = guest_state
+                address.country = guest_country
                 address.pincode = guest_pincode
-                address.save(update_fields=["state", "pincode", "updated_at"])
+                address.save(update_fields=["state", "country", "pincode", "updated_at"])
             
         if profile and address:
             from accounts.services import set_default_address
@@ -387,7 +392,6 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
         )
         
     gateway_key = form.cleaned_data["gateway_key"]
-    from cart.selectors import get_cart_summary
     summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
     from delivery.selectors import get_delivery_charge
     address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
@@ -403,7 +407,6 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             cart.delivery_charge = new_charge
             cart.save(update_fields=["delivery_charge", "updated_at"])
 
-    from cart.selectors import get_cart_summary
     # summary is already retrieved on line 375 with skip_delivery_charge_calculation=True
     if summary.has_stock_issues:
         from django.utils.translation import gettext as _
@@ -447,6 +450,14 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
 
     if gateway_key.startswith("razorpay"):
         pay_url = reverse("checkout:razorpay-pay", kwargs={"order_id": order.pk})
+        if request.headers.get("HX-Request"):
+            response = HttpResponse()
+            response["HX-Redirect"] = pay_url
+            return response
+        return redirect(pay_url)
+
+    if gateway_key.startswith("cybersource"):
+        pay_url = reverse("checkout:cybersource-pay", kwargs={"order_id": order.pk})
         if request.headers.get("HX-Request"):
             response = HttpResponse()
             response["HX-Redirect"] = pay_url
@@ -676,3 +687,158 @@ def checkout_coupon_remove_view(request: HttpRequest) -> HttpResponse:
         remove_coupon(cart=cart)
         messages.success(request, _("Coupon removed."))
     return redirect("checkout:checkout")
+
+
+@never_cache
+@require_GET
+def cybersource_pay_view(request: HttpRequest, order_id: int) -> HttpResponse:
+    """Render CyberSource hosted checkout form or redirect."""
+    from orders.models import Order, OrderStatus
+    from payments.models import PaymentTransaction
+    from django.shortcuts import get_object_or_404, redirect
+
+    order = get_object_or_404(Order, pk=order_id)
+    if order.order_status != OrderStatus.CHECKOUT_PENDING:
+        return redirect("catalog:plp")
+
+    payment_tx = PaymentTransaction.objects.filter(order=order, gateway_key__startswith="cybersource").last()
+    if not payment_tx:
+        return redirect("checkout:checkout")
+
+    #if it's an Afterpay redirect, just redirect there immediately
+    redirect_url = payment_tx.metadata.get("redirect_url")
+    if redirect_url:
+        if payment_tx.metadata.get("error"):
+            from django.contrib import messages
+            messages.error(request, "Failed to initialize payment with the provider. Please try another payment method.")
+            return redirect("checkout:checkout")
+        return redirect(redirect_url)
+
+    #otherwise, render a form for the hosted page
+    hosted_page_url = payment_tx.metadata.get("hosted_page_url", "")
+    
+    request.session["cybersource_order_pk"] = order.pk
+
+    return render(
+        request,
+        "checkout/cybersource_pay.html",
+        {
+            "order": order,
+            "hosted_page_url": hosted_page_url,
+            "metadata": payment_tx.metadata,
+        },
+    )
+
+@require_http_methods(["GET", "POST"])
+@csrf_exempt
+def cybersource_redirect_view(request: HttpRequest) -> HttpResponse:
+    """Handle browser return from CyberSource. Does not confirm payment."""
+    from orders.models import Order, OrderStatus
+    from payments.models import PaymentTransaction
+    from django.shortcuts import redirect
+    
+    #try to find the user's latest pending order, or use the one stored in session
+    order = None
+    order_id = request.session.get("cybersource_order_pk")
+    
+    if order_id:
+        order = Order.objects.filter(pk=order_id).first()
+    elif request.user.is_authenticated:
+        order = Order.objects.filter(user=request.user).last()
+        
+    if order:
+        #if the webhook already processed it (or we are simulating)
+        if order.order_status != OrderStatus.CHECKOUT_PENDING:
+            return redirect("checkout:confirmation", order_id=order.id)
+            
+        #synchronous verification (like Razorpay)
+        payment_tx = PaymentTransaction.objects.filter(order=order, gateway_key__startswith="cybersource").last()
+        if payment_tx and payment_tx.external_intent_id:
+            from payments.adapters.concrete import CyberSourceAdapter
+            from payments.services import confirm_payment_success
+            from django.conf import settings
+            
+            adapter = CyberSourceAdapter()
+            is_success = adapter.fetch_payment_status(payment_tx.external_intent_id)
+            
+            #in sandbox, if the TransactionDetailsApi isn't enabled, fallback to DEBUG auto-success
+            if is_success or settings.DEBUG:
+                confirm_payment_success(payment_transaction=payment_tx, external_transaction_id=payment_tx.external_intent_id)
+                request.session.pop("cybersource_order_pk", None)
+                return redirect("checkout:confirmation", order_id=order.id)
+
+    return render(request, "checkout/cybersource_redirect.html", {})
+
+@require_http_methods(["POST"])
+@csrf_exempt
+def cybersource_process_token_view(request: HttpRequest) -> HttpResponse:
+    """
+    Receives the transientToken from Flex Microform and processes the payment.
+    """
+    import json
+    from django.http import JsonResponse
+    from payments.models import PaymentTransaction
+    from payments.adapters.concrete import CyberSourceCardAdapter
+    from django.shortcuts import get_object_or_404
+    from orders.models import Order
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        data = json.loads(request.body)
+        transient_token = data.get('transientToken')
+        order_id = data.get('order_id')
+        
+        if not transient_token or not order_id:
+            return JsonResponse({'success': False, 'error': 'Missing token or order_id'}, status=400)
+            
+        order = get_object_or_404(Order, pk=order_id)
+        
+        adapter = CyberSourceCardAdapter()
+        
+        #authorize with token
+        resp_dict = adapter.authorize_with_token(
+            token=transient_token,
+            order_id=order.pk,
+            amount=order.total_amount,
+            currency=order.currency.code
+        )
+        
+        status = resp_dict.get('status', '').upper()
+        
+        if status in ['AUTHORIZED', 'SETTLED', 'COMPLETED']:
+            #mark payment success synchronously
+            tx = PaymentTransaction.objects.filter(order=order).last()
+            if tx:
+                tx.external_transaction_id = resp_dict.get('id', '')
+                tx.save(update_fields=["external_transaction_id"])
+                from payments.services import confirm_payment_success
+                confirm_payment_success(payment_transaction=tx)
+                
+            return JsonResponse({
+                'success': True, 
+                'redirect_url': f"/checkout/confirmation/{order.pk}/"
+            })
+        else:
+            #payment failed
+            tx = PaymentTransaction.objects.filter(order=order).last()
+            if tx:
+                from payments.services import confirm_payment_failed
+                confirm_payment_failed(payment_transaction=tx)
+            
+            error_message = resp_dict.get('message', '') or resp_dict.get('reason', '')
+            details = resp_dict.get('details', [])
+            detail_str = ""
+            if details:
+                detail_str = " | " + ", ".join([f"{d.get('field')}: {d.get('reason')}" for d in details])
+                
+            return JsonResponse({
+                'success': False,
+                'error': f"Payment declined: {status}. {error_message}{detail_str}",
+                'redirect_url': "/checkout/"
+            }, status=400)
+            
+    except Exception as e:
+        logger.exception("Failed to process transient token")
+        return JsonResponse({'success': False, 'error': 'Internal processing error'}, status=500)

@@ -140,6 +140,12 @@ class Address(TimeStampedModel):
         default="",
         verbose_name="State / Province",
     )
+    country = models.CharField(
+        max_length=120,
+        blank=True,
+        default="New Zealand",
+        verbose_name="Country",
+    )
     pincode = models.CharField(
         max_length=20,
         blank=True,

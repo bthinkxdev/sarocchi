@@ -89,13 +89,30 @@ def _sync_checkout_pending_order(
             unit_price=line.unit_price_at_add,
         )
 
+    address_snapshot: dict[str, Any] = {}
+    if session.address_id:
+        addr = session.address
+        address_snapshot = {
+            "name": addr.customer_profile.user.get_full_name() if (addr.customer_profile and addr.customer_profile.user) else "",
+            "email": addr.customer_profile.user.email if (addr.customer_profile and addr.customer_profile.user) else "",
+            "phone": addr.customer_profile.phone if addr.customer_profile else "",
+            "label": addr.label,
+            "line1": addr.line1,
+            "line2": addr.line2,
+            "city": addr.city,
+            "state": getattr(addr, "state", "") or "",
+            "country": getattr(addr, "country", "") or "NZ",
+            "pincode": getattr(addr, "pincode", "") or "",
+        }
+
     order.subtotal = summary.subtotal
     order.coupon_discount = summary.coupon_discount
     order.delivery_charge = summary.delivery_charge
     order.total_amount = summary.grand_total
     order.idempotency_key = idempotency_key
+    order.delivery_address_snapshot = address_snapshot
     order.save(
-        update_fields=["subtotal", "coupon_discount", "delivery_charge", "total_amount", "idempotency_key", "updated_at"]
+        update_fields=["subtotal", "coupon_discount", "delivery_charge", "total_amount", "idempotency_key", "delivery_address_snapshot", "updated_at"]
     )
 
     if gateway_key == "cod":
@@ -222,6 +239,7 @@ def place_order(
             "line2": addr.line2,
             "city": addr.city,
             "state": getattr(addr, "state", "") or "",
+            "country": getattr(addr, "country", "") or "NZ",
             "pincode": getattr(addr, "pincode", "") or "",
         }
         

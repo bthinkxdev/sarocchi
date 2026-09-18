@@ -97,17 +97,17 @@
             </div>
             <div class="row g-2 mb-3">
               <div class="col-md-6">
-                <label class="form-label small">{% trans "State" %} <span class="text-danger">*</span></label>
-                <select name="guest_state" id="guest_state" class="form-select form-select-sm" placeholder="{% trans 'Search and select state...' %}">
-                  <option value="">{% trans "Search and select state..." %}</option>
-                  {% with current_state=checkout_session.address.state|default:'' %}
-                  {% for state in indian_states %}
-                  <option value="{{ state }}" {% if current_state == state %}selected{% endif %}>{{ state }}</option>
-                  {% endfor %}
-                  {% endwith %}
-                </select>
+                <label class="form-label small">{% trans "State / Province" %} <span class="text-danger">*</span></label>
+                <input type="text" name="guest_state" id="guest_state" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.state|default:'' }}{% endif %}">
                 <div id="error-guest_state" class="text-danger small mt-1"></div>
               </div>
+              <div class="col-md-6">
+                <label class="form-label small">{% trans "Country Code (e.g. NZ)" %} <span class="text-danger">*</span></label>
+                <input type="text" name="guest_country" id="guest_country" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.country|default:'NZ' }}{% endif %}" placeholder="e.g. NZ, AU">
+                <div id="error-guest_country" class="text-danger small mt-1"></div>
+              </div>
+            </div>
+            <div class="row g-2 mb-3">
               <div class="col-md-6">
                 <label class="form-label small">{% trans "PIN / Postal Code" %} <span class="text-danger">*</span></label>
                 <input type="text" name="guest_pincode" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.pincode|default:'' }}{% endif %}">
@@ -310,7 +310,7 @@
         var guestEmail = guestEmailEl ? guestEmailEl.value.trim() : '';
         var guestPhone = guestPhoneEl ? guestPhoneEl.value.trim() : '';
         
-        var errorIds = ['error-guest_name', 'error-guest_email', 'error-guest_phone', 'error-guest_address_line1', 'error-guest_city', 'error-guest_state', 'error-guest_pincode'];
+        var errorIds = ['error-guest_name', 'error-guest_email', 'error-guest_phone', 'error-guest_address_line1', 'error-guest_city', 'error-guest_state', 'error-guest_country', 'error-guest_pincode'];
         errorIds.forEach(function(id) {
           var el = document.getElementById(id);
           if (el) el.innerText = '';
@@ -356,6 +356,7 @@
           var line1 = checkoutForm.querySelector('input[name="guest_address_line1"]')?.value.trim() || '';
           var city = checkoutForm.querySelector('input[name="guest_city"]')?.value.trim() || '';
           var state = checkoutForm.querySelector('[name="guest_state"]')?.value.trim() || '';
+          var country = checkoutForm.querySelector('[name="guest_country"]')?.value.trim() || '';
           var pincode = checkoutForm.querySelector('input[name="guest_pincode"]')?.value.trim() || '';
 
           if (!line1) {
@@ -387,7 +388,7 @@
           }
 
           if (!state) {
-            document.getElementById('error-guest_state').innerText = 'State is required.';
+            document.getElementById('error-guest_state').innerText = 'State / Province is required.';
             isValid = false;
           } else if (/^\d+$/.test(state)) {
             document.getElementById('error-guest_state').innerText = 'State cannot consist of numbers only.';
@@ -397,6 +398,14 @@
             isValid = false;
           } else if (!/[a-zA-Z]/.test(state)) {
             document.getElementById('error-guest_state').innerText = 'Enter a valid state containing letters.';
+            isValid = false;
+          }
+
+          if (!country) {
+            document.getElementById('error-guest_country').innerText = 'Country Code is required.';
+            isValid = false;
+          } else if (!/^[a-zA-Z]{2}$/.test(country)) {
+            document.getElementById('error-guest_country').innerText = 'Country must be exactly a 2-letter code (e.g. NZ).';
             isValid = false;
           }
 
@@ -485,6 +494,16 @@
       if (/^[^a-zA-Z]+$/.test(val)) return "City cannot consist of only numbers and special characters.";
       return "";
     });
+    setupInputListener('input[name="guest_state"]', 'error-guest_state', function(val) {
+      if (/^\d+$/.test(val)) return "State cannot consist of numbers only.";
+      if (/^[^a-zA-Z0-9]+$/.test(val)) return "State cannot consist of special characters only.";
+      if (/^[^a-zA-Z]+$/.test(val)) return "State cannot consist of only numbers and special characters.";
+      return "";
+    });
+    setupInputListener('input[name="guest_country"]', 'error-guest_country', function(val) {
+      if (val && !/^[a-zA-Z]{2}$/.test(val)) return "Country must be exactly a 2-letter code (e.g. NZ).";
+      return "";
+    });
     setupInputListener('input[name="guest_pincode"]', 'error-guest_pincode', function(val) {
       if (/^[a-zA-Z\s]+$/.test(val)) return "Postal code cannot contain alphabets only.";
       if (/^[^a-zA-Z0-9]+$/.test(val)) return "Postal code cannot contain special characters only.";
@@ -499,37 +518,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    function initTomSelect(el) {
-      if (el && !el.classList.contains('tomselected')) {
-        new TomSelect(el, {
-          create: false,
-          sortField: {
-            field: "text",
-            direction: "asc"
-          },
-          onChange: function(value) {
-            var errorDiv = document.getElementById('error-guest_state');
-            if (errorDiv) {
-              if (!value) {
-                errorDiv.innerText = "State is required.";
-              } else {
-                errorDiv.innerText = "";
-              }
-            }
-          }
-        });
-      }
-    }
-
-    var stateSelect = document.getElementById('guest_state');
-    initTomSelect(stateSelect);
-
-    document.body.addEventListener('htmx:load', function(evt) {
-      var newSelect = document.getElementById('guest_state');
-      if (newSelect) {
-        initTomSelect(newSelect);
-      }
-    });
+    // TomSelect initialization removed as state dropdown is now a text input
   });
 
   document.addEventListener("DOMContentLoaded", function () {

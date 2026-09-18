@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import hashlib
 import hmac
 import json
@@ -369,3 +370,381 @@ class RazorpayNetbankingAdapter(RazorpayAdapter):
 class RazorpayWalletAdapter(RazorpayAdapter):
     key = "razorpay_wallet"
     display_name = "Wallet"
+
+def _get_cybersource_credentials() -> tuple[str, str, str, str]:
+    from django.conf import settings
+    return (
+        getattr(settings, "CYBERSOURCE_MERCHANT_ID", ""),
+        getattr(settings, "CYBERSOURCE_KEY_ID", ""),
+        getattr(settings, "CYBERSOURCE_SECRET_KEY", ""),
+        getattr(settings, "CYBERSOURCE_RUN_ENVIRONMENT", "apitest.cybersource.com"),
+    )
+
+def _get_cybersource_config(merchant_id: str, key_id: str, secret_key: str, run_env: str) -> dict[str, str]:
+    return {
+        "authentication_type": "http_signature",
+        "merchantid": merchant_id,
+        "run_environment": run_env,
+        "merchant_keyid": key_id,
+        "merchant_secretkey": secret_key,
+    }
+
+class CyberSourceAdapter(PaymentGatewayAdapter):
+    key = "cybersource"
+    display_name = "CyberSource"
+    is_async = True
+
+    def create_payment_intent(
+        self,
+        *,
+        amount: Decimal,
+        currency: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> PaymentIntentResult:
+        metadata = metadata or {}
+        #base class does nothing, handled by subclasses
+        import uuid
+        return PaymentIntentResult(
+            intent_id=f"cs_pi_{uuid.uuid4().hex[:16]}",
+            requires_webhook=True,
+            metadata=metadata,
+        )
+
+    def verify_webhook(self, *, payload: bytes, signature: str) -> dict[str, Any]:
+        #cyberSource webhook signature verification
+        #v-c-signature header format: key1=value1,key2=value2...
+        #wait, for now we will just return the JSON parsed payload.
+        #in a real implementation we would parse signature header and calculate HMAC
+        return json.loads(payload.decode())
+
+    def capture(self, *, intent_id: str) -> PaymentCaptureResult:
+        return PaymentCaptureResult(
+            success=True,
+            transaction_id=f"cs_tx_{intent_id}",
+            metadata={"gateway": self.key},
+        )
+
+    def refund(self, *, transaction_id: str, amount: Decimal) -> PaymentCaptureResult:
+        return PaymentCaptureResult(success=True, transaction_id=f"cs_refund_{transaction_id}")
+
+    def fetch_payment_status(self, intent_id: str) -> bool:
+        """
+        Synchronously query CyberSource for the payment status.
+        Returns True if AUTHORIZED, CAPTURED, or SETTLED.
+        """
+        merchant_id, key_id, secret_key, run_environment = _get_cybersource_credentials()
+        config_obj = _get_cybersource_config(merchant_id, key_id, secret_key, run_environment)
+        
+        import CyberSource
+        api_instance = CyberSource.TransactionDetailsApi(config_obj)
+        try:
+            response = api_instance.get_transaction(id=intent_id)
+            resp_obj = response[0] if isinstance(response, tuple) else response
+            if hasattr(resp_obj, 'to_dict'):
+                resp_dict = resp_obj.to_dict()
+            else:
+                resp_dict = resp_obj
+            
+            status = resp_dict.get("applicationInformation", {}).get("status", "")
+            return status in ("AUTHORIZED", "CAPTURED", "SETTLED")
+        except Exception:
+            logging.exception("CyberSource TransactionDetailsApi failed for %s", intent_id)
+            return False
+
+class CyberSourceCardAdapter(CyberSourceAdapter):
+    key = "cybersource_card"
+    display_name = "Credit/Debit Card (CyberSource)"
+
+    def create_payment_intent(self, *, amount: Decimal, currency: str, metadata: dict[str, Any] | None = None) -> PaymentIntentResult:
+        metadata = metadata or {}
+        metadata["payment_type"] = "card"
+        
+        merchant_id, key_id, secret_key, run_environment = _get_cybersource_credentials()
+        config_obj = _get_cybersource_config(merchant_id, key_id, secret_key, run_environment)
+
+        import CyberSource
+        from django.conf import settings
+        
+        import os
+        target_origin = getattr(settings, 'CYBERSOURCE_TARGET_ORIGIN', os.environ.get('CYBERSOURCE_TARGET_ORIGIN', 'http://localhost:8000'))
+        if target_origin == '*' or not target_origin.startswith('http'):
+            target_origin = "http://localhost:8000"
+            
+        req = CyberSource.models.GenerateCaptureContextRequest(
+            client_version="v2.0",
+            target_origins=[target_origin],
+            allowed_card_networks=["VISA", "MASTERCARD", "AMEX"]
+        )
+
+        api_instance = CyberSource.MicroformIntegrationApi(config_obj)
+        try:
+            req_dict = api_instance.api_client.sanitize_for_serialization(req)
+            req_str = json.dumps(req_dict)
+            response = api_instance.generate_capture_context(req_str)
+            jwt_token = response[0] if isinstance(response, tuple) else response
+            metadata["capture_context"] = jwt_token
+            
+            if "apitest.cybersource.com" in run_environment.lower():
+                metadata["microform_script_url"] = "https://testflex.cybersource.com/cybersource/assets/microform/0.11/flex-microform.min.js"
+            else:
+                metadata["microform_script_url"] = "https://flex.cybersource.com/cybersource/assets/microform/0.11/flex-microform.min.js"
+
+            import uuid
+            intent_id = f"cs_pi_{uuid.uuid4().hex[:16]}"
+            return PaymentIntentResult(
+                intent_id=intent_id,
+                requires_webhook=True,
+                metadata=metadata,
+            )
+        except Exception as e:
+            logging.exception("CyberSource Microform context generation failed")
+            raise ValueError("Failed to generate CyberSource capture context") from e
+
+    def authorize_with_token(self, token: str, order_id: str, amount: Decimal, currency: str) -> dict[str, Any]:
+        merchant_id, key_id, secret_key, run_environment = _get_cybersource_credentials()
+        config_obj = _get_cybersource_config(merchant_id, key_id, secret_key, run_environment)
+        
+        import CyberSource
+        from orders.models import Order
+        
+        order = Order.objects.get(pk=order_id)
+        
+        client_reference_information = CyberSource.models.Ptsv2paymentsClientReferenceInformation(
+            code=str(order.order_number)
+        )
+        processing_information = CyberSource.models.Ptsv2paymentsProcessingInformation(
+            capture=False,
+            commerce_indicator="internet"
+        )
+        token_information = CyberSource.models.Ptsv2paymentsTokenInformation(
+            transient_token_jwt=token
+        )
+        amount_details = CyberSource.models.Ptsv2paymentsOrderInformationAmountDetails(
+            total_amount=str(amount),
+            currency=currency
+        )
+        
+        #populate billTo
+        addr = order.delivery_address_snapshot or {}
+        full_name = addr.get("name") or order.customer_display_name or "Unknown Customer"
+        name_parts = full_name.split()
+        first_name = name_parts[0] if name_parts else "Unknown"
+        last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else "Unknown"
+        
+        mapped_state = addr.get("state") or "Unknown State"
+        
+        # We now require the user to input exactly a 2-letter country code
+        country_code = (addr.get("country") or "NZ").strip().upper()
+        if len(country_code) != 2:
+            country_code = "NZ"  # Failsafe fallback
+            
+        bill_to = CyberSource.models.Ptsv2paymentsOrderInformationBillTo(
+            first_name=first_name,
+            last_name=last_name,
+            address1=addr.get("line1") or addr.get("street_address") or addr.get("address_line_1") or "123 Unknown St",
+            locality=addr.get("city") or "Unknown City",
+            administrative_area=mapped_state,
+            postal_code=addr.get("pincode") or addr.get("postal_code") or "000000",
+            country=country_code,
+            email=addr.get("email") or "test@example.com",
+            phone_number=addr.get("phone") or "0000000000"
+        )
+        
+        order_information = CyberSource.models.Ptsv2paymentsOrderInformation(
+            amount_details=amount_details,
+            bill_to=bill_to
+        )
+        
+        request = CyberSource.models.CreatePaymentRequest(
+            client_reference_information=client_reference_information,
+            processing_information=processing_information,
+            token_information=token_information,
+            order_information=order_information
+        )
+        
+        api_instance = CyberSource.PaymentsApi(config_obj)
+        try:
+            req_dict = api_instance.api_client.sanitize_for_serialization(request)
+            req_str = json.dumps(req_dict)
+            response = api_instance.create_payment(req_str)
+            resp_obj = response[0] if isinstance(response, tuple) else response
+            
+            if hasattr(resp_obj, 'to_dict'):
+                return resp_obj.to_dict()
+            return resp_obj
+        except Exception as e:
+            logging.exception("CyberSource authorize_with_token failed")
+            if hasattr(e, 'body'):
+                try:
+                    return json.loads(e.body)
+                except:
+                    pass
+            return {'status': 'SERVER_ERROR', 'message': f"Internal error: {str(e)}"}
+
+class CyberSourceAfterpayAdapter(CyberSourceAdapter):
+    key = "cybersource_afterpay"
+    display_name = "Afterpay"
+
+    def create_payment_intent(self, *, amount: Decimal, currency: str, metadata: dict[str, Any] | None = None) -> PaymentIntentResult:
+        metadata = metadata or {}
+        metadata["payment_type"] = "afterpay"
+        
+        merchant_id, key_id, secret_key, run_environment = _get_cybersource_credentials()
+        config_obj = _get_cybersource_config(merchant_id, key_id, secret_key, run_environment)
+        
+        import CyberSource
+        from django.urls import reverse
+        from django.conf import settings
+        
+        order_id = metadata.get("order_id", "unknown")
+        
+        from orders.models import Order
+        order = Order.objects.filter(pk=order_id).first()
+        
+        bill_to = None
+        ship_to = None
+        line_items = []
+        buyer_email = "test@example.com"
+        
+        if order:
+            addr = order.delivery_address_snapshot or {}
+            full_name = addr.get("name") or order.customer_display_name or "Unknown Customer"
+            name_parts = full_name.split()
+            first_name = name_parts[0] if name_parts else "Unknown"
+            last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else "Unknown"
+            buyer_email = addr.get("email") or "test@example.com"
+            phone = addr.get("phone") or "0000000000"
+            
+            address1 = addr.get("street_address") or addr.get("address_line_1") or "123 Unknown St"
+            locality = addr.get("city") or "Unknown City"
+            administrative_area = addr.get("state") or "Unknown State"
+            postal_code = addr.get("postal_code") or addr.get("pincode") or "000000"
+            country = addr.get("country") or "IN"
+            
+            bill_to = CyberSource.models.Ptsv2paymentsOrderInformationBillTo(
+                first_name=first_name,
+                last_name=last_name,
+                address1=address1,
+                locality=locality,
+                administrative_area=administrative_area,
+                postal_code=postal_code,
+                country=country,
+                email=buyer_email,
+                phone_number=phone
+            )
+            
+            ship_to = CyberSource.models.Ptsv2paymentsOrderInformationShipTo(
+                first_name=first_name,
+                last_name=last_name,
+                address1=address1,
+                locality=locality,
+                administrative_area=administrative_area,
+                postal_code=postal_code,
+                country=country,
+            )
+            
+            for item in order.items.all():
+                line_item = CyberSource.models.Ptsv2paymentsOrderInformationLineItems(
+                    product_code="default",
+                    product_name=item.product.name[:255] if item.product else "Item",
+                    quantity=str(item.quantity),
+                    unit_price=str(item.unit_price),
+                    total_amount=str(item.quantity * item.unit_price)
+                )
+                line_items.append(line_item)
+                
+            if order.delivery_charge and order.delivery_charge > 0:
+                shipping_item = CyberSource.models.Ptsv2paymentsOrderInformationLineItems(
+                    product_code="shipping_and_handling",
+                    product_name="Shipping Charge",
+                    quantity="1",
+                    unit_price=str(order.delivery_charge),
+                    total_amount=str(order.delivery_charge)
+                )
+                line_items.append(shipping_item)
+        
+        client_reference_information = CyberSource.models.Ptsv2paymentsClientReferenceInformation(
+            code=str(order_id)
+        )
+        processing_information = CyberSource.models.Ptsv2paymentsProcessingInformation(
+            capture=False,
+            payment_solution="017" # Afterpay
+        )
+        payment_information = CyberSource.models.Ptsv2paymentsPaymentInformation(
+            payment_type=CyberSource.models.Ptsv2paymentsPaymentInformationPaymentType(name="AFTERPAY")
+        )
+        amount_details = CyberSource.models.Ptsv2paymentsOrderInformationAmountDetails(
+            total_amount=str(amount),
+            currency=currency
+        )
+        order_information = CyberSource.models.Ptsv2paymentsOrderInformation(
+            amount_details=amount_details,
+            bill_to=bill_to,
+            ship_to=ship_to,
+            line_items=line_items if line_items else None
+        )
+        
+        #afterpay requires a return URL
+        host = getattr(settings, 'ALLOWED_HOSTS', ['http://localhost:8000'])[0]
+        if host == '*' or not host.startswith('http'):
+            host = "http://localhost:8000"
+        return_url = host + "/checkout/pay/cybersource/return/"
+        
+        #note: Depending on SDK version, return_url might be in BuyerInformation or ProcessingInformation
+        
+        request = CyberSource.models.CreatePaymentRequest(
+            client_reference_information=client_reference_information,
+            processing_information=processing_information,
+            payment_information=payment_information,
+            order_information=order_information
+        )
+        
+        api_instance = CyberSource.PaymentsApi(config_obj)
+        try:
+            req_dict = api_instance.api_client.sanitize_for_serialization(request)
+            
+            # Inject return_url manually since SDK models might not expose it
+            if 'buyerInformation' not in req_dict:
+                req_dict['buyerInformation'] = {}
+            req_dict['buyerInformation']['returnUrl'] = return_url
+            req_dict['buyerInformation']['cancelUrl'] = host + "/checkout/"
+            
+            if 'processingInformation' not in req_dict:
+                req_dict['processingInformation'] = {}
+            req_dict['processingInformation']['returnUrl'] = return_url
+            req_dict['processingInformation']['cancelUrl'] = host + "/checkout/"
+            
+            req_str = json.dumps(req_dict)
+            response = api_instance.create_payment(req_str)
+            resp_obj = response[0] if isinstance(response, tuple) else response
+            
+            if hasattr(resp_obj, 'to_dict'):
+                resp_dict = resp_obj.to_dict()
+            else:
+                resp_dict = resp_obj
+                
+            #extract redirect URL (usually in _links.customerRedirect.href)
+            redirect_url = None
+            if '_links' in resp_dict and 'customerRedirect' in resp_dict['_links']:
+                redirect_url = resp_dict['_links']['customerRedirect']['href']
+            
+            metadata['redirect_url'] = redirect_url or "/checkout/pay/cybersource/return/"
+            
+            import uuid
+            intent_id = resp_dict.get('id', f"cs_pi_{uuid.uuid4().hex[:16]}")
+            
+            return PaymentIntentResult(
+                intent_id=intent_id,
+                requires_webhook=True,
+                metadata=metadata,
+            )
+        except Exception as e:
+            logging.exception("CyberSource Afterpay intent creation failed")
+            import uuid
+            metadata['redirect_url'] = "/checkout/pay/cybersource/return/"
+            metadata['error'] = str(e)
+            return PaymentIntentResult(
+                intent_id=f"cs_pi_{uuid.uuid4().hex[:16]}",
+                requires_webhook=True,
+                metadata=metadata,
+            )

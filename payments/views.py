@@ -35,6 +35,56 @@ def payment_webhook_view(request: HttpRequest, gateway_key: str) -> HttpResponse
 
 @csrf_exempt
 @require_POST
+def cybersource_webhook_view(request: HttpRequest) -> HttpResponse:
+    """
+    Handle server-to-server Event Notifications from CyberSource.
+    This is the authoritative source for payment success/failure.
+    """
+    try:
+        from payments.services import verify_cybersource_webhook_signature
+        signature = request.headers.get("V-C-Signature", "")
+        payload = request.body
+        
+        if not verify_cybersource_webhook_signature(payload=payload, signature_header=signature):
+            logger.warning("Rejected CyberSource webhook: invalid or missing V-C-Signature.")
+            return JsonResponse({"status": "invalid_signature"}, status=400)
+            
+        data = json.loads(payload.decode('utf-8'))
+        
+        #cyberSource webhooks typically have a 'state' or 'status' field in the payload
+        #e.g., {'id': '...', 'status': 'AUTHORIZED', 'clientReferenceInformation': {'code': 'order_id'}}
+        order_id = None
+        if 'clientReferenceInformation' in data and 'code' in data['clientReferenceInformation']:
+            order_id = data['clientReferenceInformation']['code']
+            
+        status = data.get('status', '').upper()
+        
+        if order_id and status in ['AUTHORIZED', 'SETTLED', 'COMPLETED']:
+            from payments.models import PaymentTransaction, PaymentStatus
+            tx = PaymentTransaction.objects.filter(order_id=order_id).last()
+            if tx and tx.status != PaymentStatus.SUCCESS:
+                from payments.services import confirm_payment_success
+                tx.external_transaction_id = data.get('id', '')
+                tx.save(update_fields=["external_transaction_id"])
+                confirm_payment_success(payment_transaction=tx)
+                logger.info("CyberSource Webhook: Order %s marked as SUCCESS", order_id)
+                
+        elif order_id and status in ['DECLINED', 'FAILED', 'REJECTED']:
+            from payments.models import PaymentTransaction, PaymentStatus
+            tx = PaymentTransaction.objects.filter(order_id=order_id).last()
+            if tx and tx.status != PaymentStatus.FAILED:
+                from payments.services import confirm_payment_failed
+                confirm_payment_failed(payment_transaction=tx)
+                logger.info("CyberSource Webhook: Order %s marked as FAILED", order_id)
+                
+        return HttpResponse("Webhook received", status=200)
+    except Exception:
+        logger.exception("Failed to process CyberSource webhook")
+        return HttpResponse(status=400)
+
+
+@csrf_exempt
+@require_POST
 def razorpay_webhook_view(request: HttpRequest) -> HttpResponse:
     """
     Real, signature-verified Razorpay webhook — server-to-server confirmation

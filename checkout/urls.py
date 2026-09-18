@@ -18,4 +18,7 @@ urlpatterns = [
     path("confirmation/<int:order_id>/", views.checkout_confirmation_view, name="confirmation"),
     path("pay/razorpay/<int:order_id>/", views.razorpay_pay_view, name="razorpay-pay"),
     path("pay/razorpay/callback/", views.razorpay_callback_view, name="razorpay-callback"),
+    path("pay/cybersource/<int:order_id>/", views.cybersource_pay_view, name="cybersource-pay"),
+    path("pay/cybersource/process/", views.cybersource_process_token_view, name="cybersource-process-token"),
+    path("pay/cybersource/return/", views.cybersource_redirect_view, name="cybersource-return"),
 ]

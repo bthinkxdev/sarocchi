@@ -142,7 +142,8 @@ def process_payment(
         metadata=metadata,
     )
     payment_tx.external_intent_id = intent.intent_id
-    payment_tx.save(update_fields=["external_intent_id", "updated_at"])
+    payment_tx.metadata = intent.metadata
+    payment_tx.save(update_fields=["external_intent_id", "metadata", "updated_at"])
 
     if adapter.is_async:
         return payment_tx
@@ -207,8 +208,50 @@ def verify_razorpay_webhook_signature(*, payload: bytes, signature: str) -> bool
     secret = settings.RAZORPAY_WEBHOOK_SECRET
     if not secret or not signature:
         return False
+
+    import hmac
+    import hashlib
+
     expected = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
+
+
+def verify_cybersource_webhook_signature(*, payload: bytes, signature_header: str) -> bool:
+    """
+    Verify a CyberSource webhook's signature.
+    This ensures the webhook actually came from CyberSource and hasn't been tampered with.
+    """
+    from django.conf import settings
+    secret = getattr(settings, 'CYBERSOURCE_SECRET_KEY', '')
+    
+    if not secret or not signature_header:
+        return False
+        
+    #cyberSource can send the signature in a few formats depending on configuration.
+    #often it is a comma-separated list: keyid="...", algorithm="...", signature="..."
+    #we extract the 'signature="..."' part.
+    signature_val = signature_header
+    if 'signature="' in signature_header:
+        import re
+        match = re.search(r'signature="([^"]+)"', signature_header)
+        if match:
+            signature_val = match.group(1)
+            
+    import hmac
+    import hashlib
+    import base64
+    
+    try:
+        #cyberSource webhooks typically sign the raw payload using HMAC-SHA256 and base64 encode it.
+        #note: Depending on your exact EBC webhook config, you may need to concatenate specific headers.
+        #for this implementation we use the standard payload hash.
+        decoded_secret = base64.b64decode(secret)
+        expected_mac = hmac.new(decoded_secret, payload, hashlib.sha256).digest()
+        expected_signature = base64.b64encode(expected_mac).decode('utf-8')
+        
+        return hmac.compare_digest(expected_signature, signature_val)
+    except Exception:
+        return False
 
 
 _RAZORPAY_HANDLED_EVENTS = frozenset({"payment.captured", "order.paid", "payment.failed"})

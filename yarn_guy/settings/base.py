@@ -265,3 +265,8 @@ DELHIVERY_PICKUP_LOCATION = env("DELHIVERY_PICKUP_LOCATION", default="Primary")
 #this is deployment-only config for verifying payments.views.razorpay_webhook_view
 RAZORPAY_WEBHOOK_SECRET = env("RAZORPAY_WEBHOOK_SECRET", default="")
 
+#cybersource settings
+CYBERSOURCE_MERCHANT_ID = env("CYBERSOURCE_MERCHANT_ID", default="")
+CYBERSOURCE_KEY_ID = env("CYBERSOURCE_KEY_ID", default="")
+CYBERSOURCE_SECRET_KEY = env("CYBERSOURCE_SECRET_KEY", default="")
+CYBERSOURCE_RUN_ENVIRONMENT = env("CYBERSOURCE_RUN_ENVIRONMENT", default="apitest.cybersource.com")
