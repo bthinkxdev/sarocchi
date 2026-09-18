@@ -435,6 +435,22 @@ class CouponForm(forms.ModelForm):
         ]
         widgets = {"valid_from": _DATETIME, "valid_until": _DATETIME}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.utils import timezone
+        now = timezone.localtime().strftime('%Y-%m-%dT%H:%M')
+        self.fields["valid_from"].widget.attrs["min"] = now
+        self.fields["valid_until"].widget.attrs["min"] = now
+
+    def clean(self):
+        cleaned_data = super().clean()
+        valid_from = cleaned_data.get("valid_from")
+        valid_until = cleaned_data.get("valid_until")
+
+        if valid_from and valid_until and valid_from >= valid_until:
+            self.add_error("valid_until", "Valid until date must be after valid from date.")
+
+        return cleaned_data
 
 
 class FlashSaleForm(forms.ModelForm):
@@ -442,6 +458,23 @@ class FlashSaleForm(forms.ModelForm):
         model = FlashSale
         fields = ["name", "products", "discount_percentage", "starts_at", "ends_at", "is_active"]
         widgets = {"starts_at": _DATETIME, "ends_at": _DATETIME}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.utils import timezone
+        now = timezone.localtime().strftime('%Y-%m-%dT%H:%M')
+        self.fields["starts_at"].widget.attrs["min"] = now
+        self.fields["ends_at"].widget.attrs["min"] = now
+
+    def clean(self):
+        cleaned_data = super().clean()
+        starts_at = cleaned_data.get("starts_at")
+        ends_at = cleaned_data.get("ends_at")
+
+        if starts_at and ends_at and starts_at >= ends_at:
+            self.add_error("ends_at", "End date must be after start date.")
+
+        return cleaned_data
 
 
 class NewsletterSubscriberForm(forms.ModelForm):
