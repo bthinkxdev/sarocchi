@@ -454,7 +454,8 @@
       const qtyInput = elt.querySelector(".pdp-qty-input");
       if (qtyInput) {
         const qty = parseInt(qtyInput.value, 10);
-        const maxStock = parseInt("{{ product.stock_quantity|default:0 }}", 10);
+        const mainQtyInput = document.getElementById('pdp-qty');
+        const maxStock = mainQtyInput ? parseInt(mainQtyInput.getAttribute('data-max-stock') || '0', 10) : 0;
         if (maxStock > 0 && qty > maxStock) {
           e.preventDefault();
           e.stopImmediatePropagation();

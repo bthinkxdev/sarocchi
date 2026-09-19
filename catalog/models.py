@@ -402,7 +402,7 @@ class Product(TimeStampedModel):
                 discount = int(((eff_mrp - eff_price) / eff_mrp) * 100)
             data.append({
                 "id": str(v.pk),
-                "name": v.name,
+                "name": v.display_name,
                 "stock": v.stock_quantity,
                 "thresh": getattr(v, "low_stock_threshold", self.low_stock_threshold),
                 "price": str(eff_price),

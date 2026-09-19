@@ -972,6 +972,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
           radio.addEventListener('change', function () {
             if (variantId) variantId.value = this.value;
+            
+            var qvQtyInput = document.getElementById('jm-qv-qty');
+            var qvFormQty = document.getElementById('jm-qv-form-qty');
+            if (qvQtyInput) qvQtyInput.value = '1';
+            if (qvFormQty) qvFormQty.value = '1';
+
             var curSymbol = '';
             if (price && price.textContent) {
               var match = price.textContent.match(/^[^\d.,]+/);
@@ -1340,6 +1346,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
           radio.addEventListener('change', function () {
             if (variantId) variantId.value = this.value;
+            
+            var atcQtyInput = document.getElementById('jm-atc-qty');
+            if (atcQtyInput) atcQtyInput.value = '1';
+
             if (selVariantName) {
               selVariantName.hidden = false;
               selVariantName.textContent = 'Quantity: ' + v.name;

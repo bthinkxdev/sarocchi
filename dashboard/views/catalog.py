@@ -288,7 +288,8 @@ def _render_product_form(request, product, mode):
                                 product_attr_ids.append(val_obj.id)
                     
                     product.attribute_values.set(product_attr_ids)
-                    product.variants.all().delete()
+                    
+                    updated_variant_ids = []
                     
                     v_dynamic_attributes = request.POST.getlist("variant_dynamic_attributes[]")
                     
@@ -313,17 +314,31 @@ def _render_product_form(request, product, mode):
                             
                         dynamic_attrs_str = v_dynamic_attributes[i] if i < len(v_dynamic_attributes) else ""
                         
-                        variant = ProductVariant.objects.create(
-                            product=product,
-                            sku_suffix=sku_suffix,
-                            stock_quantity=stock,
-                            low_stock_threshold=low_stock,
-                            base_price=base_price,
-                            mrp=mrp,
-                            purchase_price=purchase_price,
-                            display_order=i,
-                            name=f"{product.name} - {sku_suffix}" if sku_suffix else product.name
-                        )
+                        variant_name = f"{product.name} - {sku_suffix}" if sku_suffix else product.name
+                        
+                        variant = ProductVariant.objects.filter(product=product, sku_suffix=sku_suffix).first()
+                        if variant:
+                            variant.stock_quantity = stock
+                            variant.low_stock_threshold = low_stock
+                            variant.base_price = base_price
+                            variant.mrp = mrp
+                            variant.purchase_price = purchase_price
+                            variant.display_order = i
+                            variant.name = variant_name
+                            variant.save()
+                        else:
+                            variant = ProductVariant.objects.create(
+                                product=product,
+                                sku_suffix=sku_suffix,
+                                stock_quantity=stock,
+                                low_stock_threshold=low_stock,
+                                base_price=base_price,
+                                mrp=mrp,
+                                purchase_price=purchase_price,
+                                display_order=i,
+                                name=variant_name
+                            )
+                        updated_variant_ids.append(variant.pk)
                         
                         if dynamic_attrs_str:
                             attr_val_ids = []
@@ -341,6 +356,8 @@ def _render_product_form(request, product, mode):
                                 
                         total_stock += stock
                         
+                    product.variants.exclude(pk__in=updated_variant_ids).delete()
+                    
                     product.stock_quantity = total_stock
                     if v_base_prices and v_base_prices[0]:
                         product.base_price = float(v_base_prices[0])

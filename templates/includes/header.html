@@ -267,7 +267,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
   </div>
   <div class="offcanvas-body" id="cart-drawer-body" hx-get="{% url 'cart:drawer' %}"
-    hx-trigger="cartItemAdded from:body, cartUpdated from:body" hx-swap="innerHTML">
+    hx-trigger="cartItemAdded from:body, cartUpdated from:body, show.bs.offcanvas from:#cartOffcanvas" hx-swap="innerHTML">
     <p class="text-muted small mb-0">{% trans "Your cart items will appear here." %}</p>
   </div>
 </div>

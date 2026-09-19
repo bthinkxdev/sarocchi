@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, Optional
 
-from django.db.models import Prefetch, Sum
+from django.db.models import Prefetch, Sum, Count
 from django.http import HttpRequest
 
 from cart.models import Cart, CartItem
@@ -203,6 +203,9 @@ def get_cart_summary(*, cart: Cart, skip_delivery_charge_calculation: bool = Fal
             "product__brand",
             "variant",
         )
+        .annotate(
+            product_variant_count=Count("product__variants", distinct=True)
+        )
         .prefetch_related(
             Prefetch(
                 "product__images",
@@ -247,6 +250,8 @@ def get_cart_summary(*, cart: Cart, skip_delivery_charge_calculation: bool = Fal
         subtotal += line_subtotal
         item_count += item.quantity
         max_stock = item.variant.stock_quantity if item.variant else item.product.stock_quantity
+        if item.variant is None and getattr(item, "product_variant_count", 0) > 0:
+            max_stock = 0
         if max_stock is None:
             max_stock = 0
         is_out = not item.product.is_in_stock or max_stock <= 0

@@ -89,7 +89,11 @@ def add_to_cart(
     else:
         new_quantity = quantity
 
-    max_stock = variant.stock_quantity if variant else product.stock_quantity
+    if variant is None and product.variants.exists():
+        max_stock = 0
+    else:
+        max_stock = variant.stock_quantity if variant else product.stock_quantity
+        
     if new_quantity > max_stock:
         raise InsufficientStockError(f"Only {max_stock} items available in stock.")
 
@@ -147,12 +151,21 @@ def adjust_cart_item_quantity(
         raise CartItemNotFoundError("Cart item not found.")
 
     new_quantity = item.quantity + delta
-    if new_quantity < 1:
-        new_quantity = 1
 
-    max_stock = item.variant.stock_quantity if item.variant else item.product.stock_quantity
+    if item.variant is None and item.product.variants.exists():
+        max_stock = 0
+    else:
+        max_stock = item.variant.stock_quantity if item.variant else item.product.stock_quantity
+        
     if new_quantity > max_stock:
-        raise InsufficientStockError(f"Only {max_stock} items available in stock.")
+        if delta < 0:
+            pass
+        else:
+            raise InsufficientStockError(f"Only {max_stock} items available in stock.")
+            
+    if new_quantity < 1:
+        item.delete()
+        return None
 
     user = (
         cart.customer_profile.user
