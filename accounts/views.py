@@ -921,6 +921,13 @@ def customer_invoice_detail(request: HttpRequest, pk: int) -> HttpResponse:
         pk=pk
     )
     
+    from orders.services import REVENUE_ORDER_STATUSES
+    if order.order_status not in REVENUE_ORDER_STATUSES:
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        messages.error(request, f"Invoice is not yet available for order {order.order_number} because it is not confirmed.")
+        return redirect(request.META.get("HTTP_REFERER", "accounts:dashboard"))
+
     #security check to prevent unauthorized invoice downloads
     if request.user.is_authenticated:
         if order.customer_profile and order.customer_profile.user != request.user:

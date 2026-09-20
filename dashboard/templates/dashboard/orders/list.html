@@ -73,8 +73,16 @@
           </thead>
         <tbody>
           {% for order in objects %}
-          <tr>
-            <td><input type="checkbox" class="form-check-input order-checkbox" name="order_ids" value="{{ order.pk }}"></td>
+          <tr {% if not order.is_revenue_order %}class="table-light text-muted"{% endif %}>
+            <td>
+              {% if order.is_revenue_order %}
+              <input type="checkbox" class="form-check-input order-checkbox" name="order_ids" value="{{ order.pk }}">
+              {% else %}
+              <span data-bs-toggle="tooltip" data-bs-placement="top" title="Cannot select unconfirmed order for bulk invoice">
+                <input type="checkbox" class="form-check-input order-checkbox-disabled" disabled style="cursor: not-allowed; opacity: 0.4;">
+              </span>
+              {% endif %}
+            </td>
             <td><a href="{% url 'dashboard:order-detail' order.pk %}">{{ order.order_number }}</a></td>
             <td>
               {{ order.customer_display_name }}
@@ -97,7 +105,13 @@
             <td>{{ order.total_amount|floatformat:2 }} {% if order.currency %}{{ order.currency.code }}{% endif %}</td>
             <td>{{ order.created_at|date:"M d, Y H:i" }}</td>
             <td class="text-center">
+              {% if order.is_revenue_order %}
               <a href="{% url 'dashboard:order-invoice' order.pk %}" class="btn btn-sm btn-outline-secondary" title="View Invoice" target="_blank"><i class="ti ti-file-invoice"></i> View</a>
+              {% else %}
+              <span data-bs-toggle="tooltip" data-bs-placement="top" title="Invoice available once order is confirmed">
+                <button type="button" disabled class="btn btn-sm btn-outline-secondary opacity-50" style="cursor: not-allowed;"><i class="ti ti-file-invoice"></i> View</button>
+              </span>
+              {% endif %}
             </td>
             <td class="text-end">
               <a href="{% url 'dashboard:order-detail' order.pk %}" class="btn btn-sm btn-light" title="View Order"><i class="ti ti-eye"></i></a>
@@ -118,6 +132,14 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    //initialize bootstrap tooltips
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function (el) {
+            new bootstrap.Tooltip(el);
+        });
+    }
+
     const selectAll = document.getElementById('select-all-orders');
     const clearBtn = document.getElementById('clear-selection-btn');
 
@@ -135,10 +157,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tableContainer) {
         tableContainer.addEventListener('change', function(e) {
             if (e.target.id === 'select-all-orders') {
-                const checkboxes = document.querySelectorAll('.order-checkbox');
+                const checkboxes = document.querySelectorAll('.order-checkbox:not(:disabled)');
                 checkboxes.forEach(cb => {
                     cb.checked = e.target.checked;
                 });
+            } else if (e.target.classList.contains('order-checkbox')) {
+                const enabledCheckboxes = document.querySelectorAll('.order-checkbox:not(:disabled)');
+                const checkedCheckboxes = document.querySelectorAll('.order-checkbox:checked');
+                if (selectAll) {
+                    selectAll.checked = enabledCheckboxes.length > 0 && enabledCheckboxes.length === checkedCheckboxes.length;
+                }
             }
             toggleClearBtn();
         });
@@ -150,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const checked = document.querySelectorAll('.order-checkbox:checked');
             if (checked.length === 0) {
                 e.preventDefault();
-                alert('Please select at least one order to print.');
+                alert('Please select at least one confirmed order to print.');
             }
         });
     }

@@ -157,6 +157,11 @@ class Order(TimeStampedModel):
         return self.order_number
 
     @property
+    def is_revenue_order(self) -> bool:
+        from orders.services import REVENUE_ORDER_STATUSES
+        return self.order_status in REVENUE_ORDER_STATUSES
+
+    @property
     def is_guest_order(self) -> bool:
         """
         True if the order wasn't placed by a signed-in customer.

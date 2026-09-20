@@ -202,9 +202,18 @@ def order_payment_transition(request: HttpRequest, pk: int) -> HttpResponse:
 def order_invoice_detail(request: HttpRequest, pk: int) -> HttpResponse:
     """Render the HTML invoice for an order."""
     from core.models import SiteSettings
+    from orders.services import REVENUE_ORDER_STATUSES
+    from django.http import HttpResponse
+
     order = get_object_or_404(
         Order.objects.select_related("customer_profile__user", "currency"), pk=pk
     )
+    
+    if order.order_status not in REVENUE_ORDER_STATUSES:
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        messages.error(request, f"Invoice is not yet available for order {order.order_number} because it is not confirmed.")
+        return redirect(request.META.get("HTTP_REFERER", "dashboard:order-list"))
     
     context = {
         "order": order,
@@ -224,9 +233,15 @@ def order_bulk_invoice_detail(request: HttpRequest) -> HttpResponse:
         messages.error(request, "No orders selected for printing.")
         return redirect("dashboard:order-list")
         
+    from orders.services import REVENUE_ORDER_STATUSES
+
     orders_qs = Order.objects.select_related(
         "customer_profile__user", "currency"
-    ).filter(pk__in=order_ids).order_by("-created_at")
+    ).filter(pk__in=order_ids, order_status__in=REVENUE_ORDER_STATUSES).order_by("-created_at")
+    
+    if not orders_qs.exists():
+        messages.error(request, "None of the selected orders are confirmed yet.")
+        return redirect("dashboard:order-list")
     
     context = {
         "orders": orders_qs,
