@@ -655,6 +655,10 @@ class SiteSettingsForm(forms.ModelForm):
         "meta_pixel_id",
         "razorpay_key_id",
         "razorpay_key_secret",
+        "cybersource_merchant_id",
+        "cybersource_key_id",
+        "cybersource_secret_key",
+        "cybersource_run_environment",
     ]
 
     class Meta:
@@ -683,7 +687,14 @@ class SiteSettingsForm(forms.ModelForm):
             "meta_pixel_id",
             "razorpay_key_id",
             "razorpay_key_secret",
+            "cybersource_merchant_id",
+            "cybersource_key_id",
+            "cybersource_secret_key",
+            "cybersource_run_environment",
         ]
+        widgets = {
+            "cybersource_secret_key": forms.PasswordInput(render_value=True),
+        }
         labels = {
             "vendor_email": "Email",
             "order_notification_email": "Notification Email",
@@ -699,6 +710,11 @@ class SiteSettingsForm(forms.ModelForm):
         if self.instance and not getattr(self.instance, "enable_razorpay", True):
             self.fields.pop("razorpay_key_id", None)
             self.fields.pop("razorpay_key_secret", None)
+        if self.instance and not getattr(self.instance, "enable_cybersource", True):
+            self.fields.pop("cybersource_merchant_id", None)
+            self.fields.pop("cybersource_key_id", None)
+            self.fields.pop("cybersource_secret_key", None)
+            self.fields.pop("cybersource_run_environment", None)
         for field_name, field in self.fields.items():
             if field_name != "logo":
                 if isinstance(field.widget, forms.CheckboxInput):

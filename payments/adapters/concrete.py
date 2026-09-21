@@ -372,6 +372,18 @@ class RazorpayWalletAdapter(RazorpayAdapter):
     display_name = "Wallet"
 
 def _get_cybersource_credentials() -> tuple[str, str, str, str]:
+    try:
+        from core.models import SiteSettings
+        settings_inst = SiteSettings.objects.first()
+        if settings_inst and settings_inst.cybersource_merchant_id:
+            return (
+                settings_inst.cybersource_merchant_id.strip(),
+                settings_inst.cybersource_key_id.strip(),
+                settings_inst.cybersource_secret_key.strip(),
+                settings_inst.cybersource_run_environment.strip() or "apitest.cybersource.com",
+            )
+    except Exception:
+        pass
     from django.conf import settings
     return (
         getattr(settings, "CYBERSOURCE_MERCHANT_ID", ""),

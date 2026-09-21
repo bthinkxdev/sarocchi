@@ -155,9 +155,11 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     settings = get_site_settings()
     enable_cod = getattr(settings, "enable_cod", True)
     enable_razorpay = getattr(settings, "enable_razorpay", True)
+    enable_cybersource = getattr(settings, "enable_cybersource", True)
 
-    from payments.adapters.concrete import _get_razorpay_credentials
+    from payments.adapters.concrete import _get_razorpay_credentials, _get_cybersource_credentials
     razorpay_key, razorpay_secret = _get_razorpay_credentials()
+    cs_merchant_id, cs_key_id, cs_secret_key, _ = _get_cybersource_credentials()
     
     available_gateways = {}
     for key, adapter in PAYMENT_GATEWAYS.items():
@@ -165,6 +167,9 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
             continue
         if key.startswith("razorpay"):
             if not enable_razorpay or not razorpay_key or not razorpay_secret:
+                continue
+        if key.startswith("cybersource"):
+            if not enable_cybersource or not cs_merchant_id or not cs_key_id or not cs_secret_key:
                 continue
         available_gateways[key] = adapter
         
@@ -416,6 +421,14 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             request,
             "checkout/partials/errors.html",
             {"errors": {"gateway_key": ["Online payment is currently disabled."]}},
+            status=200,
+        )
+
+    if gateway_key.startswith("cybersource") and not getattr(settings, "enable_cybersource", True):
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"gateway_key": ["CyberSource payment is currently disabled."]}},
             status=200,
         )
 

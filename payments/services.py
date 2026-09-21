@@ -221,8 +221,17 @@ def verify_cybersource_webhook_signature(*, payload: bytes, signature_header: st
     Verify a CyberSource webhook's signature.
     This ensures the webhook actually came from CyberSource and hasn't been tampered with.
     """
-    from django.conf import settings
-    secret = getattr(settings, 'CYBERSOURCE_SECRET_KEY', '')
+    secret = ""
+    try:
+        from core.models import SiteSettings
+        settings_inst = SiteSettings.objects.first()
+        if settings_inst and settings_inst.cybersource_secret_key:
+            secret = settings_inst.cybersource_secret_key.strip()
+    except Exception:
+        pass
+    if not secret:
+        from django.conf import settings
+        secret = getattr(settings, 'CYBERSOURCE_SECRET_KEY', '')
     
     if not secret or not signature_header:
         return False

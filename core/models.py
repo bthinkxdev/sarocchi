@@ -335,6 +335,39 @@ class SiteSettings(TimeStampedModel):
         verbose_name="Razorpay Key Secret",
         help_text="Razorpay Key Secret / Test Key Secret for payment signature verification.",
     )
+    enable_cybersource = models.BooleanField(
+        default=True,
+        verbose_name="Enable CyberSource",
+        help_text="Enable or disable CyberSource payment option at checkout.",
+    )
+    cybersource_merchant_id = models.CharField(
+        max_length=120,
+        blank=True,
+        verbose_name="CyberSource Merchant ID",
+        help_text="CyberSource Merchant ID.",
+    )
+    cybersource_key_id = models.CharField(
+        max_length=120,
+        blank=True,
+        verbose_name="CyberSource Key ID",
+        help_text="CyberSource REST API Key ID.",
+    )
+    cybersource_secret_key = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="CyberSource Secret Key",
+        help_text="CyberSource Shared Secret Key.",
+    )
+    cybersource_run_environment = models.CharField(
+        max_length=50,
+        default="apitest.cybersource.com",
+        choices=[
+            ("apitest.cybersource.com", "Test"),
+            ("api.cybersource.com", "Live"),
+        ],
+        verbose_name="CyberSource Environment",
+        help_text="Run environment for CyberSource API requests.",
+    )
 
     class Meta:
         verbose_name = "Site settings"
