@@ -44,8 +44,8 @@ def privacy_policy_view(request: HttpRequest) -> HttpResponse:
     """Render the static Privacy Policy page."""
     context = seo_context(
         request=request,
-        title=_("Privacy Policy | Yarn Guy"),
-        description=_("Read Yarn Guy privacy policy to learn how we collect and use your data."),
+        title=_("Privacy Policy | Sarocchi"),
+        description=_("Read Sarocchi privacy policy to learn how we collect, use, and protect your data."),
     )
     return render(request, "core/privacy_policy.html", context)
 
@@ -55,30 +55,30 @@ def shipping_policy_view(request: HttpRequest) -> HttpResponse:
     """Render the static Shipping Policy page."""
     context = seo_context(
         request=request,
-        title=_("Shipping Policy | Yarn Guy"),
-        description=_("Read Yarn Guy's shipping policy covering processing times, delivery estimates, and charges."),
+        title=_("Shipping Policy | Sarocchi"),
+        description=_("Read Sarocchi Luxe Designs shipping policy covering delivery rates, timeframes, and international shipping."),
     )
     return render(request, "core/shipping_policy.html", context)
 
 
 @require_GET
 def terms_of_service_view(request: HttpRequest) -> HttpResponse:
-    """Render the static Terms of Service page."""
+    """Render the static Terms and Conditions page."""
     context = seo_context(
         request=request,
-        title=_("Terms of Service | Yarn Guy"),
-        description=_("Read the Terms of Service governing your use of yarnguy.com."),
+        title=_("Terms and Conditions | Sarocchi"),
+        description=_("Read Sarocchi Luxe Designs Terms and Conditions governing orders, purchases, and website use."),
     )
     return render(request, "core/terms_of_service.html", context)
 
 
 @require_GET
 def refund_policy_view(request: HttpRequest) -> HttpResponse:
-    """Render the static Refund Policy page."""
+    """Render the static Refund & Cancellation Policy page."""
     context = seo_context(
         request=request,
-        title=_("Refund Policy | Yarn Guy"),
-        description=_("Read Yarn Guy's return and refund policy."),
+        title=_("Refund & Cancellation Policy | Sarocchi"),
+        description=_("Read Sarocchi Luxe Designs refund and cancellation policy."),
     )
     return render(request, "core/refund_policy.html", context)
 
