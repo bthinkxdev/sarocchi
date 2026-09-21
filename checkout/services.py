@@ -74,7 +74,7 @@ def _sync_checkout_pending_order(
     Sync an existing CHECKOUT_PENDING order with the current cart and update its payment method.
     This handles the case where a customer abandons a checkout, updates their cart, and checks out again.
     """
-    summary = get_cart_summary(cart=session.cart)
+    summary = get_cart_summary(cart=session.cart, skip_delivery_charge_calculation=True)
     if not summary.lines:
         raise CheckoutSessionError("Cart is empty.")
 
@@ -218,7 +218,7 @@ def place_order(
     if session.status != CheckoutSessionStatus.DRAFT:
         raise CheckoutSessionError("Checkout session is not in draft status.")
 
-    summary = get_cart_summary(cart=session.cart)
+    summary = get_cart_summary(cart=session.cart, skip_delivery_charge_calculation=True)
     if not summary.lines:
         raise CheckoutSessionError("Cart is empty.")
 

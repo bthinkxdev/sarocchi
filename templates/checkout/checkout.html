@@ -68,18 +68,29 @@
             {% for address in addresses %}
             <div class="form-check mb-2">
               <input class="form-check-input address-radio" type="radio" name="address_id" value="{{ address.pk }}"
-                id="addr-{{ address.pk }}" {% if forloop.first %}checked{% endif %}>
+                id="addr-{{ address.pk }}" {% if selected_address_id == address.pk|stringformat:"s" or not selected_address_id and forloop.first %}checked{% endif %}
+                hx-post="{% url 'checkout:update-delivery-charge' %}"
+                hx-target="#order-summary-container"
+                hx-select="#order-summary-container"
+                hx-include="#checkout-form"
+                hx-swap="outerHTML">
               <label class="form-check-label small" for="addr-{{ address.pk }}">{{ address.label }} — {{ address.line1 }}, {{ address.city }}{% if address.pincode %} - {{ address.pincode }}{% endif %}</label>
             </div>
             {% endfor %}
             <div class="form-check mb-2">
-              <input class="form-check-input address-radio" type="radio" name="address_id" value="" id="addr-new">
+              <input class="form-check-input address-radio" type="radio" name="address_id" value="" id="addr-new"
+                {% if selected_address_id == "" %}checked{% endif %}
+                hx-post="{% url 'checkout:update-delivery-charge' %}"
+                hx-target="#order-summary-container"
+                hx-select="#order-summary-container"
+                hx-include="#checkout-form"
+                hx-swap="outerHTML">
               <label class="form-check-label small fw-bold text-floward" for="addr-new">+ {% trans "Add a new address" %}</label>
             </div>
           </div>
           {% endif %}
 
-          <div id="new-address-form-fields" class="mt-2" {% if addresses %}style="display: none;"{% endif %}>
+          <div id="new-address-form-fields" class="mt-2" {% if addresses and selected_address_id != "" %}style="display: none;"{% endif %}>
             <label class="form-label small fw-bold mb-3">{% trans "Enter Delivery Address Details:" %}</label>
             <div class="mb-3">
               <label class="form-label small">{% trans "Address Line 1" %} <span class="text-danger">*</span></label>
@@ -92,7 +103,50 @@
             </div>
             <div class="mb-3">
               <label class="form-label small">{% trans "City" %} <span class="text-danger">*</span></label>
-              <input type="text" name="guest_city" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.city|default:'' }}{% endif %}">
+              {% if active_cities %}
+              <select name="guest_city" id="guest_city" class="form-select form-select-sm"
+                hx-post="{% url 'checkout:update-delivery-charge' %}"
+                hx-target="#order-summary-container"
+                hx-select="#order-summary-container"
+                hx-include="#checkout-form"
+                hx-swap="outerHTML">
+                <option value="" disabled {% if not selected_city %}selected{% endif %}>{% trans "--- Select Delivery City ---" %}</option>
+                {% for city in active_cities %}
+                <option value="{{ city.name }}" {% if selected_city|lower == city.name|lower %}selected{% endif %}>
+                  {{ city.name }}
+                </option>
+                {% endfor %}
+                {% if selected_city and not city_in_active_cities and selected_city != "__other__" %}
+                <option value="{{ selected_city }}" selected>
+                  {{ selected_city }}
+                </option>
+                {% endif %}
+                <option value="__other__" {% if selected_city == "__other__" %}selected{% endif %}>
+                  {% trans "Other / Enter another city..." %}
+                </option>
+              </select>
+              <div id="manual-city-wrapper" class="mt-2" style="{% if selected_city != '__other__' %}display: none;{% endif %}">
+                <input type="text" name="guest_city_manual" id="guest_city_manual" class="form-control form-control-sm"
+                  placeholder="{% trans 'Enter your city' %}"
+                  value="{% if not city_in_active_cities and selected_city != '__other__' %}{{ selected_city|default:'' }}{% endif %}"
+                  hx-post="{% url 'checkout:update-delivery-charge' %}"
+                  hx-trigger="input changed delay:500ms, blur"
+                  hx-target="#order-summary-container"
+                  hx-select="#order-summary-container"
+                  hx-include="#checkout-form"
+                  hx-swap="outerHTML">
+              </div>
+              {% else %}
+              <input type="text" name="guest_city" id="guest_city" class="form-control form-control-sm"
+                value="{{ selected_city|default:'' }}"
+                placeholder="{% trans 'Enter your city' %}"
+                hx-post="{% url 'checkout:update-delivery-charge' %}"
+                hx-trigger="blur, change"
+                hx-target="#order-summary-container"
+                hx-select="#order-summary-container"
+                hx-include="#checkout-form"
+                hx-swap="outerHTML">
+              {% endif %}
               <div id="error-guest_city" class="text-danger small mt-1"></div>
             </div>
             <div class="row g-2 mb-3">
@@ -126,6 +180,7 @@
               hx-post="{% url 'checkout:update-delivery-charge' %}"
               hx-target="#order-summary-container"
               hx-select="#order-summary-container"
+              hx-include="#checkout-form"
               hx-swap="outerHTML"
               {% if selected_gateway_key == key %}checked{% elif not selected_gateway_key and forloop.first %}checked{% endif %}>
             <label class="form-check-label small" for="gw-{{ key }}">
@@ -208,10 +263,20 @@
         </div>
         {% endfor %}
 
-        {% if summary.delivery_charge > 0 %}
+        {% if summary.delivery_charge > 0 or selected_city or checkout_session.address %}
         <div class="d-flex justify-content-between py-2 border-bottom text-muted" style="font-size: 0.875rem;">
-          <span>{% trans "Delivery Charge (COD)" %}</span>
-          <span>{{ display_currency.symbol }} {{ summary.delivery_charge }}</span>
+          <span>{% trans "Delivery Charge" %}{% if selected_gateway_key == 'cod' and settings.cod_delivery_charge > 0 %} <small class="text-muted">({% trans "incl. COD fee" %})</small>{% endif %}</span>
+          <span>{% if summary.delivery_charge > 0 %}{{ display_currency.symbol }} {{ summary.delivery_charge }}{% else %}<span class="text-success fw-semibold">{% trans "FREE" %}</span>{% endif %}</span>
+        </div>
+        {% endif %}
+
+        {% if estimated_delivery_text %}
+        <div class="d-flex justify-content-between py-1 border-bottom text-success" style="font-size: 0.8rem;">
+          <span class="d-flex align-items-center gap-1">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+            {% trans "Est. Delivery" %}
+          </span>
+          <span class="fw-medium">{{ estimated_delivery_text }}</span>
         </div>
         {% endif %}
 
@@ -298,6 +363,21 @@
       });
     }
 
+    var citySelect = document.getElementById('guest_city');
+    var manualCityWrapper = document.getElementById('manual-city-wrapper');
+    var manualCityInput = document.getElementById('guest_city_manual');
+    if (citySelect && manualCityWrapper) {
+      citySelect.addEventListener('change', function() {
+        if (citySelect.value === '__other__') {
+          manualCityWrapper.style.display = 'block';
+          if (manualCityInput) manualCityInput.focus();
+        } else {
+          manualCityWrapper.style.display = 'none';
+          if (manualCityInput) manualCityInput.value = '';
+        }
+      });
+    }
+
     var checkoutForm = document.getElementById('checkout-form');
     if (checkoutForm) {
       function validateCheckoutForm() {
@@ -354,7 +434,17 @@
 
         if (usingNewAddress) {
           var line1 = checkoutForm.querySelector('input[name="guest_address_line1"]')?.value.trim() || '';
-          var city = checkoutForm.querySelector('input[name="guest_city"]')?.value.trim() || '';
+          var citySelectEl = checkoutForm.querySelector('select[name="guest_city"]');
+          var city = '';
+          if (citySelectEl) {
+            if (citySelectEl.value === '__other__') {
+              city = checkoutForm.querySelector('input[name="guest_city_manual"]')?.value.trim() || '';
+            } else {
+              city = citySelectEl.value.trim();
+            }
+          } else {
+            city = checkoutForm.querySelector('input[name="guest_city"]')?.value.trim() || '';
+          }
           var state = checkoutForm.querySelector('[name="guest_state"]')?.value.trim() || '';
           var country = checkoutForm.querySelector('[name="guest_country"]')?.value.trim() || '';
           var pincode = checkoutForm.querySelector('input[name="guest_pincode"]')?.value.trim() || '';
@@ -459,16 +549,19 @@
     function setupInputListener(selector, errorId, checkFn) {
       var input = document.querySelector(selector);
       if (input) {
-        input.addEventListener('input', function(e) {
+        var handler = function(e) {
           var val = e.target.value;
           var errorDiv = document.getElementById(errorId);
+          if (!errorDiv) return;
           if (val.length === 0) {
             errorDiv.innerText = '';
             return;
           }
           var errMsg = checkFn(val.trim());
           errorDiv.innerText = errMsg || '';
-        });
+        };
+        input.addEventListener('input', handler);
+        input.addEventListener('change', handler);
       }
     }
 
@@ -488,7 +581,14 @@
       if (/^[^a-zA-Z]+$/.test(val)) return "Address cannot consist of only numbers and special characters.";
       return "";
     });
-    setupInputListener('input[name="guest_city"]', 'error-guest_city', function(val) {
+    setupInputListener('[name="guest_city"]', 'error-guest_city', function(val) {
+      if (val === '__other__') return "";
+      if (/^\d+$/.test(val)) return "City cannot consist of numbers only.";
+      if (/^[^a-zA-Z0-9]+$/.test(val)) return "City cannot consist of special characters only.";
+      if (/^[^a-zA-Z]+$/.test(val)) return "City cannot consist of only numbers and special characters.";
+      return "";
+    });
+    setupInputListener('input[name="guest_city_manual"]', 'error-guest_city', function(val) {
       if (/^\d+$/.test(val)) return "City cannot consist of numbers only.";
       if (/^[^a-zA-Z0-9]+$/.test(val)) return "City cannot consist of special characters only.";
       if (/^[^a-zA-Z]+$/.test(val)) return "City cannot consist of only numbers and special characters.";

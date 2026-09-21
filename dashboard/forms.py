@@ -212,7 +212,7 @@ class CityForm(SlugAutoMixin):
             "slug",
             "delivery_charge_base",
             "estimated_delivery_text",
-            "same_day_cutoff_hour",
+            # "same_day_cutoff_hour",
             "is_active",
         ]
 

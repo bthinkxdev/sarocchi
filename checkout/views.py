@@ -41,9 +41,73 @@ def _get_checkout_cart(request: HttpRequest, create: bool = False):
     return get_cart_for_request(request=request)
 
 
+def _resolve_checkout_address_and_city(
+    request: HttpRequest,
+    session: Optional[Any] = None,
+    profile: Optional[Any] = None,
+    addresses: Optional[list] = None,
+):
+    """
+    Resolve the selected address and city name for delivery calculation during checkout.
+    Checks POST data first, then session storage, then saved addresses.
+    """
+    from accounts.models import Address
+
+    raw_address_id = request.POST.get("address_id")
+    if raw_address_id is not None:
+        raw_address_id = raw_address_id.strip()
+        request.session["checkout_address_id"] = raw_address_id
+    else:
+        raw_address_id = request.session.get("checkout_address_id", "")
+
+    manual_city = request.POST.get("guest_city_manual", "").strip()
+    selected_city_post = request.POST.get("guest_city")
+    if selected_city_post is not None:
+        selected_city_post = selected_city_post.strip()
+        if selected_city_post == "__other__":
+            raw_city = manual_city
+            request.session["checkout_guest_city"] = manual_city or "__other__"
+        else:
+            raw_city = selected_city_post
+            request.session["checkout_guest_city"] = selected_city_post
+    elif manual_city:
+        raw_city = manual_city
+        request.session["checkout_guest_city"] = manual_city
+    else:
+        raw_city = request.session.get("checkout_guest_city", "")
+
+    address = None
+    if raw_address_id:
+        try:
+            address = Address.objects.filter(pk=int(raw_address_id)).first()
+        except (ValueError, TypeError):
+            pass
+
+    if not address and session and getattr(session, "address", None):
+        address = session.address
+
+    if not address and raw_address_id != "" and addresses:
+        address = addresses[0]
+    elif not address and raw_address_id != "" and profile:
+        if getattr(profile, "default_address", None):
+            address = profile.default_address
+        else:
+            saved_list = list(get_saved_addresses(customer_profile=profile, page_size=1)["results"])
+            if saved_list:
+                address = saved_list[0]
+
+    city_name = ""
+    if address and getattr(address, "city", None):
+        city_name = address.city
+    elif raw_city:
+        city_name = raw_city
+
+    return address, city_name
+
+
 @require_POST
 def checkout_update_delivery_charge_view(request: HttpRequest) -> HttpResponse:
-    """Update cart delivery charge if COD is selected and return updated summary."""
+    """Update cart delivery charge based on selected city, address, or payment method."""
     cart = _get_checkout_cart(request=request, create=False)
     if not cart:
         return HttpResponse("")
@@ -52,20 +116,35 @@ def checkout_update_delivery_charge_view(request: HttpRequest) -> HttpResponse:
     from core.services import get_site_settings
     settings = get_site_settings()
     enable_cod = getattr(settings, "enable_cod", True)
-    if gateway_key == "cod" and not enable_cod:
-        gateway_key = ""
-
-    request.session["checkout_gateway_key"] = gateway_key
-    
-    from delivery.selectors import get_delivery_charge
-    address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
-    summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
-
-    if gateway_key == "cod" and enable_cod:
-        cart.delivery_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=True)
+    if gateway_key:
+        if gateway_key == "cod" and not enable_cod:
+            gateway_key = ""
+        request.session["checkout_gateway_key"] = gateway_key
     else:
-        cart.delivery_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=False)
-        
+        gateway_key = request.session.get("checkout_gateway_key", "")
+
+    session = cart.checkout_sessions.filter(status="draft").order_by("-updated_at").first() if hasattr(cart, "checkout_sessions") else None
+    profile = cart.customer_profile if hasattr(cart, "customer_profile") else None
+
+    address, city_name = _resolve_checkout_address_and_city(
+        request=request,
+        session=session,
+        profile=profile,
+    )
+
+    if address and session and session.address != address:
+        session.address = address
+        session.save(update_fields=["address", "updated_at"])
+
+    is_cod = (gateway_key == "cod" and enable_cod)
+    summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
+    from delivery.selectors import get_delivery_charge
+    cart.delivery_charge = get_delivery_charge(
+        subtotal=summary.subtotal,
+        address=address,
+        city=city_name,
+        is_cod=is_cod,
+    )
     cart.save(update_fields=["delivery_charge", "updated_at"])
 
     from django.shortcuts import redirect
@@ -145,6 +224,16 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     from delivery.models import City
     active_cities = City.objects.filter(is_active=True)
 
+    address, city_name = _resolve_checkout_address_and_city(
+        request=request,
+        session=session,
+        profile=profile,
+        addresses=addresses,
+    )
+    if address and not session.address:
+        session.address = address
+        session.save(update_fields=["address", "updated_at"])
+
     selected_gateway_key = request.session.get("checkout_gateway_key")
     if not selected_gateway_key and session.order:
         last_tx = session.order.payment_transactions.last()
@@ -178,24 +267,33 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
         
     summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
     from delivery.selectors import get_delivery_charge
-    address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
     
-    if selected_gateway_key == "cod" and enable_cod:
-        new_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=True)
-        if cart.delivery_charge != new_charge:
-            cart.delivery_charge = new_charge
-            cart.save(update_fields=["delivery_charge", "updated_at"])
-    else:
-        new_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=False)
-        if cart.delivery_charge != new_charge:
-            cart.delivery_charge = new_charge
-            cart.save(update_fields=["delivery_charge", "updated_at"])
+    is_cod = (selected_gateway_key == "cod" and enable_cod)
+    new_charge = get_delivery_charge(
+        subtotal=summary.subtotal,
+        address=address,
+        city=city_name,
+        is_cod=is_cod,
+    )
+    if cart.delivery_charge != new_charge:
+        cart.delivery_charge = new_charge
+        cart.save(update_fields=["delivery_charge", "updated_at"])
 
     #reload summary after potential delivery charge update
     summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
 
     from core.models import State
     INDIAN_STATES = list(State.objects.filter(is_active=True).values_list('name', flat=True))
+
+    city_in_active_cities = any(c.name.lower() == (city_name or "").lower() for c in active_cities)
+
+    estimated_delivery_text = ""
+    if city_name:
+        city_obj = active_cities.filter(name__iexact=city_name).first() if hasattr(active_cities, "filter") else None
+        if city_obj and city_obj.estimated_delivery_text:
+            estimated_delivery_text = city_obj.estimated_delivery_text
+        elif settings and settings.default_estimated_delivery_text:
+            estimated_delivery_text = settings.default_estimated_delivery_text
 
     from marketing.selectors import has_any_active_coupons
     return render(
@@ -207,6 +305,10 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
             "checkout_session": session,
             "addresses": addresses,
             "active_cities": active_cities,
+            "selected_city": city_name,
+            "city_in_active_cities": city_in_active_cities,
+            "estimated_delivery_text": estimated_delivery_text,
+            "selected_address_id": str(address.pk) if address else (request.session.get("checkout_address_id") or ""),
             "indian_states": INDIAN_STATES,
             "settings": settings,
 
@@ -284,7 +386,12 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
     if not address:
         guest_address_line1 = request.POST.get("guest_address_line1", "").strip()
         guest_address_line2 = request.POST.get("guest_address_line2", "").strip()
-        guest_city = request.POST.get("guest_city", "").strip()
+        selected_city_val = request.POST.get("guest_city", "").strip()
+        manual_city_val = request.POST.get("guest_city_manual", "").strip()
+        if selected_city_val == "__other__" or not selected_city_val:
+            guest_city = manual_city_val
+        else:
+            guest_city = selected_city_val
         guest_state = request.POST.get("guest_state", "").strip()
         guest_country = request.POST.get("guest_country", "").strip()
         guest_pincode = request.POST.get("guest_pincode", "").strip()
@@ -434,7 +541,8 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
 
     summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
     from delivery.selectors import get_delivery_charge
-    address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
+    if not address and session.address:
+        address = session.address
     
     if gateway_key == "cod" and enable_cod:
         new_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=True)

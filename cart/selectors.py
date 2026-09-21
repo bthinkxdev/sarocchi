@@ -182,7 +182,14 @@ def get_wishlist_product_ids(*, request: HttpRequest) -> set[int]:
     return set(_wishlist_items_qs(request=request).values_list("product_id", flat=True))
 
 
-def get_cart_summary(*, cart: Cart, skip_delivery_charge_calculation: bool = False) -> CartSummary:
+def get_cart_summary(
+    *,
+    cart: Cart,
+    skip_delivery_charge_calculation: bool = False,
+    address=None,
+    city=None,
+    is_cod: bool = False,
+) -> CartSummary:
     """
     Return a fully computed cart summary for drawer, checkout, and payment.
 
@@ -280,8 +287,16 @@ def get_cart_summary(*, cart: Cart, skip_delivery_charge_calculation: bool = Fal
     if skip_delivery_charge_calculation:
         delivery_charge = cart.delivery_charge if cart.delivery_charge is not None else Decimal("0.00")
     else:
-        address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
-        delivery_charge = get_delivery_charge(subtotal=subtotal, address=address)
+        if address is None and city is None:
+            if hasattr(cart, "delivery_address") and cart.delivery_address:
+                address = cart.delivery_address
+            elif hasattr(cart, "checkout_sessions"):
+                session = cart.checkout_sessions.filter(status="draft").order_by("-updated_at").first()
+                if session and session.address:
+                    address = session.address
+            if address is None and cart.customer_profile and cart.customer_profile.default_address:
+                address = cart.customer_profile.default_address
+        delivery_charge = get_delivery_charge(subtotal=subtotal, address=address, city=city, is_cod=is_cod)
 
     coupon_code = cart.coupon_code
     coupon_discount = Decimal("0.00")
