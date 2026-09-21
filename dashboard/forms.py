@@ -640,30 +640,6 @@ class SiteSettingsForm(forms.ModelForm):
         "instagram_url",
         "twitter_url",
         "whatsapp_number",
-        "vendor_email",
-        "order_notification_email",
-        "notify_new_order",
-        "notify_low_stock",
-        "notify_enquiry",
-        "tax_rate_percent",
-        "cod_delivery_charge",
-        "default_shipping_charge",
-        "free_shipping_threshold",
-        "default_estimated_delivery_text",
-        "default_currency",
-        "razorpay_key_id",
-        "razorpay_key_secret",
-    ]
-    field_order = [
-        "site_name",
-        "logo",
-        "primary_color",
-        "secondary_color",
-        "font_family",
-        "facebook_url",
-        "instagram_url",
-        "twitter_url",
-        "whatsapp_number",
         "default_currency",
         "vendor_email",
         "order_notification_email",
@@ -718,6 +694,11 @@ class SiteSettingsForm(forms.ModelForm):
         default_curr = Currency.objects.filter(is_default=True).first()
         if default_curr:
             self.fields["default_currency"].initial = default_curr.pk
+        if self.instance and not getattr(self.instance, "enable_cod", True):
+            self.fields.pop("cod_delivery_charge", None)
+        if self.instance and not getattr(self.instance, "enable_razorpay", True):
+            self.fields.pop("razorpay_key_id", None)
+            self.fields.pop("razorpay_key_secret", None)
         for field_name, field in self.fields.items():
             if field_name != "logo":
                 if isinstance(field.widget, forms.CheckboxInput):

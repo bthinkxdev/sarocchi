@@ -49,20 +49,21 @@ def checkout_update_delivery_charge_view(request: HttpRequest) -> HttpResponse:
         return HttpResponse("")
 
     gateway_key = request.POST.get("gateway_key", "")
+    from core.services import get_site_settings
+    settings = get_site_settings()
+    enable_cod = getattr(settings, "enable_cod", True)
+    if gateway_key == "cod" and not enable_cod:
+        gateway_key = ""
+
     request.session["checkout_gateway_key"] = gateway_key
     
-    if gateway_key == "cod":
-        from core.services import get_site_settings
-        settings = get_site_settings()
-        from delivery.selectors import get_delivery_charge
-        address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
-        #get subtotal from cart items
-        summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
+    from delivery.selectors import get_delivery_charge
+    address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
+    summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
+
+    if gateway_key == "cod" and enable_cod:
         cart.delivery_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=True)
     else:
-        from delivery.selectors import get_delivery_charge
-        address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
-        summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
         cart.delivery_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=False)
         
     cart.save(update_fields=["delivery_charge", "updated_at"])
@@ -150,26 +151,31 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
         if last_tx:
             selected_gateway_key = last_tx.gateway_key
 
+    from core.services import get_site_settings
+    settings = get_site_settings()
+    enable_cod = getattr(settings, "enable_cod", True)
+    enable_razorpay = getattr(settings, "enable_razorpay", True)
+
     from payments.adapters.concrete import _get_razorpay_credentials
     razorpay_key, razorpay_secret = _get_razorpay_credentials()
     
     available_gateways = {}
     for key, adapter in PAYMENT_GATEWAYS.items():
-        if key.startswith("razorpay") and (not razorpay_key or not razorpay_secret):
+        if key == "cod" and not enable_cod:
             continue
+        if key.startswith("razorpay"):
+            if not enable_razorpay or not razorpay_key or not razorpay_secret:
+                continue
         available_gateways[key] = adapter
         
-    if not selected_gateway_key and available_gateways:
-        selected_gateway_key = list(available_gateways.keys())[0]
-        
-    from core.services import get_site_settings
-    settings = get_site_settings()
+    if not selected_gateway_key or selected_gateway_key not in available_gateways:
+        selected_gateway_key = list(available_gateways.keys())[0] if available_gateways else ""
         
     summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
     from delivery.selectors import get_delivery_charge
     address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
     
-    if selected_gateway_key == "cod":
+    if selected_gateway_key == "cod" and enable_cod:
         new_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=True)
         if cart.delivery_charge != new_charge:
             cart.delivery_charge = new_charge
@@ -392,11 +398,32 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
         )
         
     gateway_key = form.cleaned_data["gateway_key"]
+    from core.services import get_site_settings
+    settings = get_site_settings()
+    enable_cod = getattr(settings, "enable_cod", True)
+    enable_razorpay = getattr(settings, "enable_razorpay", True)
+
+    if gateway_key == "cod" and not enable_cod:
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"gateway_key": ["Cash on Delivery is currently disabled."]}},
+            status=200,
+        )
+
+    if gateway_key.startswith("razorpay") and not enable_razorpay:
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"gateway_key": ["Online payment is currently disabled."]}},
+            status=200,
+        )
+
     summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
     from delivery.selectors import get_delivery_charge
     address = cart.delivery_address if hasattr(cart, 'delivery_address') else None
     
-    if gateway_key == "cod":
+    if gateway_key == "cod" and enable_cod:
         new_charge = get_delivery_charge(subtotal=summary.subtotal, address=address, is_cod=True)
         if cart.delivery_charge != new_charge:
             cart.delivery_charge = new_charge

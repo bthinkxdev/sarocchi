@@ -275,6 +275,11 @@ class SiteSettings(TimeStampedModel):
     )
     default_language = models.CharField(max_length=5, default="en")
     tax_rate_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    enable_cod = models.BooleanField(
+        default=True,
+        verbose_name="Enable Cash on Delivery (COD)",
+        help_text="Enable or disable Cash on Delivery payment option at checkout.",
+    )
     cod_delivery_charge = models.DecimalField(max_digits=10, decimal_places=2, default=50, verbose_name="COD Delivery Charge")
     
     #generic shipping configuration
@@ -313,6 +318,11 @@ class SiteSettings(TimeStampedModel):
     )
     order_email_template_slug = models.CharField(max_length=80, default="order-status")
     whatsapp_template_slug = models.CharField(max_length=80, default="order-whatsapp")
+    enable_razorpay = models.BooleanField(
+        default=True,
+        verbose_name="Enable Razorpay",
+        help_text="Enable or disable Razorpay online payment option at checkout.",
+    )
     razorpay_key_id = models.CharField(
         max_length=120,
         blank=True,

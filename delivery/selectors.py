@@ -29,7 +29,7 @@ def get_delivery_charge(*, subtotal: Decimal, address=None, is_cod: bool = False
         if city:
             charge = city.delivery_charge_base
 
-    if is_cod:
+    if is_cod and getattr(settings, "enable_cod", True):
         charge += settings.cod_delivery_charge
 
     return charge

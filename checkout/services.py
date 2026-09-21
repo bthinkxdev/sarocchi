@@ -116,6 +116,10 @@ def _sync_checkout_pending_order(
     )
 
     if gateway_key == "cod":
+        for line in summary.lines:
+            target = line.variant if line.variant else line.product
+            adjust_stock(target=target, delta=-line.quantity, reason=f"order:{idempotency_key}")
+
         transition_order_status(
             order=order,
             new_status=OrderStatus.PLACED_COD,
