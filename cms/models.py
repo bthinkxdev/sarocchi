@@ -157,12 +157,9 @@ class BlogPost(TimeStampedModel, SEOModel, PublishableModel):
         verbose_name_plural = "Blog posts"
 
     def get_absolute_url(self) -> str:
-        # There's no individual blog-post detail page/route in this codebase yet
-        # (core.urls only has a "blog" list view) — points at the list page so the
-        # sitemap doesn't crash. Give each post its own URL once a detail view exists.
         from django.urls import reverse
 
-        return reverse("core:blog")
+        return reverse("core:blog-detail", kwargs={"slug": self.slug})
 
 
 class Page(TimeStampedModel, SEOModel, PublishableModel):

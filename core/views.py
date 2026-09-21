@@ -190,6 +190,22 @@ def blog_view(request: HttpRequest) -> HttpResponse:
 
 
 @require_GET
+def blog_detail_view(request: HttpRequest, slug: str) -> HttpResponse:
+    """Render a single published blog post."""
+    from cms.models import BlogPost
+    post = get_object_or_404(BlogPost, slug=slug, is_published=True)
+
+    context = seo_context(
+        request=request,
+        obj=post,
+        title=f"{post.title} | Yarn Guy",
+        description=post.meta_description or post.excerpt or post.title,
+    )
+    context["post"] = post
+    return render(request, "core/blog_detail.html", context)
+
+
+@require_GET
 def page_view(request: HttpRequest, slug: str) -> HttpResponse:
     """Render a dynamic storefront CMS page."""
     from cms.models import Page
@@ -197,6 +213,7 @@ def page_view(request: HttpRequest, slug: str) -> HttpResponse:
     
     context = seo_context(
         request=request,
+        obj=page,
         title=f"{page.title} | Yarn Guy",
         description=page.meta_description or page.title,
     )

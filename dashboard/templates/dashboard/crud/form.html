@@ -15,7 +15,7 @@
           {% endif %}
           <div class="row">
             {% for field in form %}
-            <div class="{% if field.field.widget.input_type == 'checkbox' %}col-12{% else %}col-md-6{% endif %} mb-3">
+            <div class="{% if field.field.widget.input_type == 'checkbox' or field.field.widget.template_name == 'django/forms/widgets/textarea.html' %}col-12{% else %}col-md-6{% endif %} mb-3">
               {% if field.field.widget.input_type == 'checkbox' %}
               <div class="form-check mt-4">
                 {{ field }}
@@ -25,6 +25,11 @@
               <label class="form-label" for="{{ field.id_for_label }}">
                 {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
               </label>
+              {% if field.value and field.field.widget.input_type == 'file' and field.value.url %}
+              <div class="mb-2">
+                <img src="{{ field.value.url }}" alt="Current image" class="img-thumbnail d-block" style="max-height: 120px;">
+              </div>
+              {% endif %}
               {{ field }}
               {% endif %}
               {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}

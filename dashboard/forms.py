@@ -566,6 +566,11 @@ class BlogPostForm(SlugAutoMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["slug"].required = False
+        if "og_image" in self.fields:
+            self.fields["og_image"].label = "Featured / Cover Image"
+            self.fields["og_image"].help_text = (
+                "Displayed as the blog cover image on the storefront and used as preview when shared on social media."
+            )
 
 
 class PageForm(SlugAutoMixin):
@@ -586,6 +591,11 @@ class PageForm(SlugAutoMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["slug"].required = False
+        if "og_image" in self.fields:
+            self.fields["og_image"].label = "Open Graph Image (Social Share)"
+            self.fields["og_image"].help_text = (
+                "Image used when this content is shared on social media."
+            )
 
 
 class FAQItemForm(forms.ModelForm):
