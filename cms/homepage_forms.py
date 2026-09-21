@@ -111,6 +111,29 @@ class CategoryProductsConfigForm(BaseSectionConfigForm):
             self.fields["category_slug"].choices = [("all", "All Categories")]
 
 
+class FeaturedCollectionsConfigForm(BaseSectionConfigForm):
+    collection_slugs = forms.MultipleChoiceField(
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "form-select", "size": "6"}),
+        help_text="Select one or more collections to feature. Hold Ctrl/Cmd to select multiple.",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from catalog.models import Collection
+        try:
+            self.fields["collection_slugs"].choices = [
+                (col.slug, col.name)
+                for col in Collection.objects.filter(is_active=True).order_by("name")
+            ]
+        except Exception:
+            self.fields["collection_slugs"].choices = []
+
+    def to_config(self) -> dict:
+        slugs = self.cleaned_data.get("collection_slugs", [])
+        return {"collection_slugs": slugs}
+
+
 class EmptyConfigForm(BaseSectionConfigForm):
     """Sections that need no extra config."""
 
@@ -128,6 +151,7 @@ SECTION_CONFIG_FORMS: dict[str, type[BaseSectionConfigForm]] = {
     HomepageSectionType.INSTAGRAM_GALLERY: InstagramConfigForm,
     HomepageSectionType.NEWSLETTER: EmptyConfigForm,
     HomepageSectionType.CATEGORY_PRODUCTS: CategoryProductsConfigForm,
+    HomepageSectionType.FEATURED_COLLECTIONS: FeaturedCollectionsConfigForm,
 }
 
 
@@ -156,6 +180,10 @@ def _flatten_config_for_form(*, section_type: str, config: dict) -> dict:
         return {
             "instagram_handle": config.get("instagram_handle", ""),
             "post_urls": "\n".join(config.get("post_urls", [])),
+        }
+    if section_type == HomepageSectionType.FEATURED_COLLECTIONS:
+        return {
+            "collection_slugs": config.get("collection_slugs", []),
         }
     if section_type == HomepageSectionType.HERO_SLIDER:
         return {}

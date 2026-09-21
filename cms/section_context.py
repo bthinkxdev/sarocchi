@@ -162,7 +162,13 @@ def _reviews(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _instagram(config: dict[str, Any]) -> dict[str, Any]:
-    return {"images": config.get("images", [])}
+    handle = config.get("instagram_handle", "")
+    if handle:
+        handle = handle.strip().lstrip("@")
+    return {
+        "images": config.get("images", []),
+        "instagram_handle": handle,
+    }
 
 
 def _newsletter(config: dict[str, Any]) -> dict[str, Any]:
