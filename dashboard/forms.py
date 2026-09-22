@@ -636,7 +636,7 @@ class PolicyDocumentForm(SlugAutoMixin):
 
 class SiteSettingsForm(forms.ModelForm):
     default_currency = forms.ModelChoiceField(
-        queryset=Currency.objects.all(),
+        queryset=Currency.objects.exclude(code__in=["AED", "INR", "USD"]),
         required=False,
         empty_label="--- Select Default Currency ---",
         help_text="Select the store's default currency."
@@ -714,9 +714,14 @@ class SiteSettingsForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if "default_currency" in self.fields:
+            self.fields["default_currency"].queryset = Currency.objects.exclude(
+                code__in=["AED", "INR", "USD"]
+            )
         default_curr = Currency.objects.filter(is_default=True).first()
-        if default_curr:
-            self.fields["default_currency"].initial = default_curr.pk
+        if default_curr and default_curr.code not in ["AED", "INR", "USD"]:
+            if "default_currency" in self.fields:
+                self.fields["default_currency"].initial = default_curr.pk
         if self.instance and not getattr(self.instance, "enable_cod", True):
             self.fields.pop("cod_delivery_charge", None)
         if self.instance and not getattr(self.instance, "enable_razorpay", True):
