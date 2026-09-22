@@ -82,7 +82,10 @@ def _parse_plp_filters(request: HttpRequest) -> dict:
         filters["q"] = q
     if collection := request.GET.get("collection"):
         filters["collection"] = collection
+    if flash_sale := request.GET.get("flash_sale"):
+        filters["flash_sale"] = flash_sale
     return filters
+
 
 
 @require_GET
@@ -121,9 +124,29 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
 
     active_cat = resolved_cat if resolved_cat else None
     
-    if q := filters.get("q"):
+    active_collection = None
+    if col_slug := filters.get("collection"):
+        if col_slug == "all":
+            active_collection = {"name": "All Collections", "slug": "all"}
+            title = "All Collections"
+            description = "Browse all curated activewear collections and outfits."
+        else:
+            from catalog.models import Collection
+
+            c = Collection.objects.filter(slug=col_slug, is_active=True).first()
+            if c:
+                active_collection = c
+                title = f"{c.name} Collection"
+                description = c.description or f"Shop the {c.name} collection."
+            else:
+                title = "Collection"
+                description = "Shop our curated collections."
+    elif q := filters.get("q"):
         title = f'Search Results for "{q}"'
         description = f'Products matching "{q}"'
+    elif filters.get("flash_sale"):
+        title = "Flash Sales & Offers"
+        description = "Shop limited-time flash sales and exclusive discounts on premium gym wear."
     else:
         title = (
             resolve_meta_title(obj=active_cat, fallback="Shop All | Yarn Guy")
@@ -135,6 +158,8 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
             if active_cat
             else "Browse Premium Gym Wear & Activewear - Yarn Guy."
         )
+
+
 
     context = seo_context(
         request=request,
@@ -155,8 +180,10 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
             "subcategories_map": filter_options.get("subcategories_map", {}),
             "attributes": filter_options.get("attributes", []),
             "active_category": active_cat,
+            "active_collection": active_collection,
         }
     )
+
 
     if request.headers.get("HX-Request") and not request.headers.get("HX-History-Restore-Request"):
         response = render(request, "catalog/partials/product_grid.html", context)

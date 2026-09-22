@@ -53,3 +53,8 @@ def newsletter_subscribe_view(request: HttpRequest) -> HttpResponse:
         messages.info(request, msg)
         
     return redirect(redirect_url)
+
+
+def flash_sales_view(request: HttpRequest) -> HttpResponse:
+    """Redirect to storefront shop page filtered by active flash sales."""
+    return redirect("/shop/?flash_sale=1")

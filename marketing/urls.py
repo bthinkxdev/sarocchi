@@ -9,5 +9,6 @@ from marketing import views
 app_name = "marketing"
 
 urlpatterns = [
+    path("flash-sales/", views.flash_sales_view, name="flash-sales"),
     path("newsletter/subscribe/", views.newsletter_subscribe_view, name="newsletter-subscribe"),
-]
+]

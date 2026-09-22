@@ -495,10 +495,12 @@ class NewsletterSubscriberForm(forms.ModelForm):
         fields = ["email", "is_active"]
 
 
-class HomepageSectionForm(forms.ModelForm):
-    class Meta:
-        model = HomepageSection
-        fields = ["section_type", "title", "display_order", "is_active", "config"]
+from cms.forms import HomepageSectionAdminForm
+
+
+class HomepageSectionForm(HomepageSectionAdminForm):
+    """Structured homepage section form with per-type config fields."""
+    pass
 
 
 class HeroSlideForm(forms.ModelForm):

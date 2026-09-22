@@ -1067,6 +1067,91 @@ body.mobile-search-open {
   color: var(--floward-text);
 }
 
+/*promotional section banner */
+.jm-promo-section {
+  padding: calc(var(--jm-space, 1rem) * 4) 0;
+}
+
+.jm-promo-banner {
+  min-height: 380px;
+  background-color: #121214;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.jm-promo-banner__img {
+  transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: brightness(0.92);
+}
+
+.jm-promo-banner:hover .jm-promo-banner__img {
+  transform: scale(1.04);
+}
+
+.jm-promo-banner__overlay {
+  background: linear-gradient(90deg, rgba(12, 12, 14, 0.92) 0%, rgba(12, 12, 14, 0.75) 50%, rgba(12, 12, 14, 0.35) 100%);
+  pointer-events: none;
+}
+
+@media (max-width: 767.98px) {
+  .jm-promo-banner__overlay {
+    background: linear-gradient(180deg, rgba(12, 12, 14, 0.88) 0%, rgba(12, 12, 14, 0.95) 100%);
+  }
+  .jm-promo-banner {
+    min-height: 320px;
+  }
+}
+
+.jm-promo-banner__badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: linear-gradient(135deg, #e11d48, #be123c);
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.35);
+}
+
+.jm-promo-banner__title {
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.jm-promo-banner__desc {
+  max-width: 620px;
+  line-height: 1.6;
+}
+
+.jm-promo-banner__btn {
+  background: #ffffff;
+  color: #111111;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  transition: all 0.25s ease;
+}
+
+.jm-promo-banner__btn:hover {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.jm-promo-banner__icon {
+  transition: transform 0.2s ease;
+}
+
+.jm-promo-banner__btn:hover .jm-promo-banner__icon {
+  transform: translateX(4px);
+}
+
 
 .plp-page {
   background: var(--floward-white);

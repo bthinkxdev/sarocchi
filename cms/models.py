@@ -19,7 +19,7 @@ class HomepageSectionType(models.TextChoices):
     BEST_SELLERS = "best_sellers", "Best Sellers"
     FEATURED_BRANDS = "featured_brands", "Featured Brands"
     SUBSCRIPTION_BANNER = "subscription_banner", "Subscription Banner"
-    MARKETING_FEATURES = "marketing_features", "Marketing Feature Cards"
+    MARKETING_FEATURES = "marketing_features", "Promotional Section"
     REVIEWS = "reviews", "Reviews"
     INSTAGRAM_GALLERY = "instagram_gallery", "Instagram Gallery"
     NEWSLETTER = "newsletter", "Newsletter"

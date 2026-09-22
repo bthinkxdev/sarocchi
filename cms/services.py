@@ -18,6 +18,14 @@ def build_homepage_sections_snapshot() -> list[dict[str, Any]]:
     Returns:
         List of section dicts safe for Redis JSON serialization.
     """
+    from cms.models import HomepageSectionType
+    from core.services import get_site_settings
+
+    site_settings = get_site_settings()
+    qs = HomepageSection.objects.filter(is_active=True)
+    if not site_settings.enable_brands:
+        qs = qs.exclude(section_type=HomepageSectionType.FEATURED_BRANDS)
+
     return [
         {
             "id": section.pk,
@@ -26,10 +34,9 @@ def build_homepage_sections_snapshot() -> list[dict[str, Any]]:
             "display_order": section.display_order,
             "config": section.config or {},
         }
-        for section in HomepageSection.objects.filter(is_active=True).order_by(
-            "display_order", "id"
-        )
+        for section in qs.order_by("display_order", "id")
     ]
+
 
 
 def refresh_homepage_cache() -> int:

@@ -22,15 +22,29 @@
                 <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
               </div>
               {% else %}
-              <label class="form-label" for="{{ field.id_for_label }}">
+              <label class="form-label d-block text-start mb-2" for="{{ field.id_for_label }}">
                 {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
               </label>
-              {% if field.value and field.field.widget.input_type == 'file' and field.value.url %}
-              <div class="mb-2">
-                <img src="{{ field.value.url }}" alt="Current image" class="img-thumbnail d-block" style="max-height: 120px;">
+              {% if field.field.widget.input_type == 'file' %}
+              {% if field.value %}
+              <div class="d-flex justify-content-start align-items-center mb-2">
+                <div class="d-inline-flex align-items-center gap-2 p-1 px-2 border rounded bg-light">
+                  <img src="{% if field.value.url %}{{ field.value.url }}{% else %}{{ field.value }}{% endif %}" alt="Current image" class="rounded border" style="height: 44px; width: 72px; object-fit: cover;">
+                  <span class="text-muted" style="font-size: 0.8rem;"><i class="bi bi-image me-1"></i>Current image</span>
+                </div>
+              </div>
+              {% endif %}
+              <div id="new-preview-{{ field.auto_id }}" class="d-none justify-content-start align-items-center mb-2">
+                <div class="d-inline-flex align-items-center gap-2 p-1 px-2 border rounded border-primary bg-light">
+                  <img id="new-preview-img-{{ field.auto_id }}" src="#" alt="New Preview" class="rounded border border-primary" style="height: 44px; width: 72px; object-fit: cover;">
+                  <span class="text-primary fw-medium" style="font-size: 0.8rem;"><i class="bi bi-upload me-1"></i>New upload preview</span>
+                </div>
               </div>
               {% endif %}
               {{ field }}
+
+
+
               {% endif %}
               {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
               {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
@@ -46,4 +60,69 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const destSelect = document.getElementById('id_config_destination') || document.querySelector('[name="config_destination"]');
+  const targetSelect = document.getElementById('id_config_target') || document.querySelector('[name="config_target"]');
+  if (!destSelect || !targetSelect) return;
+
+  //store all original options
+  const allOptions = Array.from(targetSelect.options).map(opt => ({
+    value: opt.value,
+    text: opt.text,
+    selected: opt.selected
+  }));
+
+  function updateTargetOptions() {
+    const currentDest = destSelect.value;
+    const currentVal = targetSelect.value;
+    targetSelect.innerHTML = '';
+
+    const matchingOptions = allOptions.filter(opt => opt.value.startsWith(currentDest + ':'));
+    matchingOptions.forEach(opt => {
+      const optionEl = document.createElement('option');
+      optionEl.value = opt.value;
+      optionEl.textContent = opt.text;
+      if (opt.value === currentVal) {
+        optionEl.selected = true;
+      }
+      targetSelect.appendChild(optionEl);
+    });
+
+    if (!targetSelect.value && matchingOptions.length > 0) {
+      targetSelect.selectedIndex = 0;
+    }
+  }
+
+  destSelect.addEventListener('change', updateTargetOptions);
+  updateTargetOptions();
+
+  //instant preview for uploaded file inputs
+  document.querySelectorAll('input[type="file"]').forEach(input => {
+    input.addEventListener('change', function() {
+      const container = document.getElementById('new-preview-' + this.id);
+      const img = document.getElementById('new-preview-img-' + this.id);
+      if (!container || !img) return;
+
+      if (this.files && this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          img.src = e.target.result;
+          container.classList.remove('d-none');
+          container.classList.add('d-flex');
+        };
+        reader.readAsDataURL(this.files[0]);
+      } else {
+        container.classList.add('d-none');
+        container.classList.remove('d-flex');
+        img.src = '#';
+      }
+
+
+    });
+  });
+});
+</script>
+
 {% endblock %}

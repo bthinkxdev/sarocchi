@@ -255,7 +255,29 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
             queryset = queryset.filter(query_obj).distinct()
         
     if collection := filters.get("collection"):
-        queryset = queryset.filter(collections__slug=collection)
+        if collection == "all":
+            queryset = queryset.filter(collections__isnull=False, collections__is_active=True).distinct()
+        else:
+            queryset = queryset.filter(collections__slug=collection)
+
+
+    if flash_sale := filters.get("flash_sale"):
+        from django.utils import timezone
+        now = timezone.now()
+        if str(flash_sale).isdigit() and int(flash_sale) > 1:
+            queryset = queryset.filter(
+                flash_sales__id=int(flash_sale),
+                flash_sales__is_active=True,
+                flash_sales__starts_at__lte=now,
+                flash_sales__ends_at__gte=now,
+            ).distinct()
+        else:
+            queryset = queryset.filter(
+                flash_sales__is_active=True,
+                flash_sales__starts_at__lte=now,
+                flash_sales__ends_at__gte=now,
+            ).distinct()
+
     
     if dynamic_attrs := filters.get("dynamic_attrs"):
         for attr_name, attr_values in dynamic_attrs.items():

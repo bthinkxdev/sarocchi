@@ -153,7 +153,132 @@ def _banner(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _marketing_features(config: dict[str, Any]) -> dict[str, Any]:
-    return {"cards": config.get("cards", [])}
+    destination = config.get("destination", "")
+    target = config.get("target", "")
+
+    #fallback if destination not yet in config
+    if not destination:
+        lt = config.get("link_type", "category")
+        destination = "collections" if lt == "collection" else ("flash_sales" if lt == "flash_sale" else lt)
+        if destination == "category":
+            cslug = config.get("category_slug")
+            target = f"category:{cslug}" if cslug else "category:all"
+        elif destination == "collections":
+            cslug = config.get("collection_slug")
+            target = f"collections:{cslug}" if cslug else "collections:all"
+        elif destination == "flash_sales":
+            target = "flash_sales:all"
+        else:
+            destination = "products"
+            target = "products:all"
+
+    target_url = "/shop/"
+    target_label = ""
+
+    #parse target prefix and slug (e.g. 'category:t-shirts' or 'collections:bride')
+    target_dest = destination
+    target_key = "all"
+    if ":" in target:
+        parts = target.split(":", 1)
+        target_dest = parts[0]
+        target_key = parts[1]
+
+    if target_dest == "products":
+        if target_key and target_key != "all":
+            target_url = f"/shop/products/{target_key}/"
+            try:
+                from catalog.models import Product
+
+                prod = Product.objects.filter(slug=target_key).first()
+                if prod:
+                    target_label = prod.name
+            except Exception:
+                pass
+        else:
+            target_url = "/shop/"
+            target_label = "All Products"
+    elif target_dest == "category":
+        if target_key and target_key != "all":
+            target_url = f"/shop/category/{target_key}/"
+            try:
+                from catalog.models import Category
+
+                cat = Category.objects.filter(slug=target_key).first()
+                if cat:
+                    target_label = cat.name
+            except Exception:
+                pass
+        else:
+            target_url = "/shop/"
+            target_label = "All Categories"
+    elif target_dest == "collections":
+        if target_key and target_key != "all":
+            target_url = f"/shop/?collection={target_key}"
+            try:
+                from catalog.models import Collection
+
+                col = Collection.objects.filter(slug=target_key).first()
+                if col:
+                    target_label = col.name
+            except Exception:
+                pass
+        else:
+            target_url = "/shop/?collection=all"
+            target_label = "All Collections"
+
+    elif target_dest == "flash_sales":
+        if target_key and target_key != "all":
+            target_url = f"/shop/?flash_sale={target_key}"
+            try:
+                from marketing.models import FlashSale
+
+                fs = FlashSale.objects.filter(pk=target_key).first()
+                if fs:
+                    target_label = fs.name
+            except Exception:
+                pass
+        else:
+            target_url = "/shop/?flash_sale=1"
+            target_label = "Flash Sales & Offers"
+    elif target_dest == "coupons":
+        if target_key and target_key != "all":
+            target_url = f"/cart/?coupon={target_key}"
+            target_label = f"Coupon {target_key}"
+        else:
+            target_url = "/cart/"
+            target_label = "Coupons & Discounts"
+    else:
+        target_url = "/shop/"
+        target_label = "All Products"
+
+
+    image_url = config.get("image_url", "")
+    if not image_url:
+        try:
+            from catalog.models import ProductImage
+
+            sample_img = (
+                ProductImage.objects.filter(is_primary=True).values_list("image", flat=True).first()
+            )
+            if sample_img:
+                image_url = f"/media/{sample_img}"
+        except Exception:
+            pass
+        if not image_url:
+            image_url = "/static/img/wholesale_banner.png"
+
+    return {
+        "badge": config.get("badge", "SPECIAL PROMOTION"),
+        "subtitle": config.get(
+            "subtitle",
+            "Elevate your workout with our premium high-performance activewear collection.",
+        ),
+        "button_text": config.get("button_text") or "Shop Now",
+        "image_url": image_url,
+        "target_url": target_url,
+        "target_label": target_label,
+        "destination": target_dest,
+    }
 
 
 def _reviews(config: dict[str, Any]) -> dict[str, Any]:
