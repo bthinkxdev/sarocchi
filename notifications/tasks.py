@@ -53,13 +53,13 @@ def dispatch_order_status_notification(
         "picked_up": f"Your package ({order.order_number}) has been picked up by Delhivery.",
         "in_transit": f"Your shipment ({order.order_number}) is on the way.",
         "out_for_delivery": f"Your order ({order.order_number}) is out for delivery today! Please make sure someone is available to receive it.",
-        "delivered": f"Your order ({order.order_number}) has been delivered successfully! We hope you love your new equipment. (You can now leave a review in your dashboard!).",
+        "delivered": f"Your order ({order.order_number}) has been delivered successfully! We hope you love your new boutique pieces. (You can now leave a review in your dashboard!).",
         "cancelled": f"Your order ({order.order_number}) has been cancelled.",
         "refunded": f"Your order ({order.order_number}) has been refunded."
     }
     
     body = status_messages.get(new_status, f"Your order status changed from {old_status} to {new_status}.")
-    body += "\n\nBest regards,\nThe Yarn Guy Team"
+    body += "\n\nBest regards,\nSarocchi Luxe Designs Team"
 
     if profile.notify_via_email and user.email:
         send_email(email=user.email, subject=title, message=body)
@@ -159,14 +159,14 @@ def dispatch_order_confirmation_notification(*, order_id: int) -> None:
     customer_name = user.first_name or user.username
     body = (
         f"Hi {customer_name},\n\n"
-        f"Thank you for placing your order with Yarn Guy \n\n"
-        f"Order ID:{order.order_number}\n\n"
+        f"Thank you for placing your order with Sarocchi Luxe Designs.\n\n"
+        f"Order ID: {order.order_number}\n\n"
         f"Your order has been received successfully.\n\n"
         f"{payment_text}\n\n"
         f"We’ll keep you updated with the shipping and tracking details once your order is dispatched.\n\n"
-        f"Thank you for choosing Yarn Guy❤️\n\n"
+        f"Thank you for choosing Sarocchi Luxe Designs ❤️\n\n"
         f"Best regards,\n"
-        f"Yarn Guy Team"
+        f"Sarocchi Luxe Designs Team"
     )
 
     if profile.notify_via_email and user.email:
@@ -174,7 +174,7 @@ def dispatch_order_confirmation_notification(*, order_id: int) -> None:
 
     if profile.phone:
         if profile.notify_via_sms:
-            send_sms(phone=profile.phone, message=f"The Yarn Guy: Order {order.order_number} has been {status_word}. Thank you!")
+            send_sms(phone=profile.phone, message=f"Sarocchi Luxe Designs: Order {order.order_number} has been {status_word}. Thank you!")
         if profile.notify_via_whatsapp:
             send_whatsapp(phone=profile.phone, message=body)
 
