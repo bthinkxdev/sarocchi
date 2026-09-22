@@ -673,6 +673,10 @@ a {
     display: block;
     width: 100%;
   }
+  .table:not(.repeater) tr.collapse:not(.show),
+  .table:not(.repeater) tbody tr.collapse:not(.show) {
+    display: none !important;
+  }
   .table:not(.repeater) thead {
     display: none !important;
   }

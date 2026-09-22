@@ -117,7 +117,7 @@
         </td>
         <td class="text-end">
           <div class="d-inline-flex gap-1 align-items-center">
-            <a href="{% url 'dashboard:product-update' obj.pk %}" class="btn btn-icon btn-sm btn-light" title="Edit"><i
+            <a href="{% url 'dashboard:product-update' obj.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-icon btn-sm btn-light" title="Edit"><i
                 class="ti ti-edit"></i></a>
             <a href="{% url 'dashboard:product-delete' obj.pk %}" class="btn btn-icon btn-sm btn-light text-danger"
               title="Delete"><i class="ti ti-trash"></i></a>

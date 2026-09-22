@@ -44,6 +44,15 @@
       </a>
     </li>
     <li>
+      <a class="nav-link {% if nav_section == 'inventory' %}active{% endif %}"
+        href="{% url 'dashboard:inventory-list' %}">
+        <i class="ti ti-packages"></i><span class="nav-text">Inventory</span>
+        {% if dashboard_low_stock_count %}
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill ms-auto px-2">{{ dashboard_low_stock_count }}</span>
+        {% endif %}
+      </a>
+    </li>
+    <li>
       <a class="nav-link {% if nav_section == 'size_charts' %}active{% endif %}"
         href="{% url 'dashboard:sizechart-list' %}">
         <i class="ti ti-ruler-measure"></i><span class="nav-text">Size Charts</span>

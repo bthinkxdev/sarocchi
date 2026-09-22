@@ -211,6 +211,11 @@
 </style>
 <form method="post" enctype="multipart/form-data" novalidate>
   {% csrf_token %}
+  {% if request.GET.next %}
+  <input type="hidden" name="next" value="{{ request.GET.next }}">
+  {% elif request.POST.next %}
+  <input type="hidden" name="next" value="{{ request.POST.next }}">
+  {% endif %}
   {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
 
   <div class="row g-3">

@@ -6,6 +6,7 @@ from dashboard.views import (  # noqa: F401
     cms,
     customers,
     home,
+    inventory,
     marketing,
     misc,
     orders,

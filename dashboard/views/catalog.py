@@ -401,8 +401,13 @@ def _render_product_form(request, product, mode):
                 else:
                     messages.success(request, f"Product '{product.name}' saved successfully.")
                     
-                next_url = request.GET.get("next")
-                if next_url:
+                from django.utils.http import url_has_allowed_host_and_scheme
+                next_url = request.POST.get("next") or request.GET.get("next")
+                if not next_url:
+                    referer = request.META.get("HTTP_REFERER")
+                    if referer and "/dashboard/" in referer and "edit" not in referer:
+                        next_url = referer
+                if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
                     return redirect(next_url)
                 return redirect("dashboard:product-list")
 
@@ -529,7 +534,12 @@ def _render_product_form(request, product, mode):
         "has_existing_variants": has_existing_variants,
         "existing_variants": existing_variants,
         "dynamic_options_list": dynamic_options_list,
-        "cancel_url": request.GET.get("next") or reverse("dashboard:product-list"),
+        "cancel_url": (
+            request.POST.get("next")
+            or request.GET.get("next")
+            or (request.META.get("HTTP_REFERER") if request.META.get("HTTP_REFERER") and "/dashboard/" in request.META.get("HTTP_REFERER") and "edit" not in request.META.get("HTTP_REFERER") else None)
+            or reverse("dashboard:product-list")
+        ),
     }
     
     return render(request, "dashboard/catalog/product_form.html", context)
