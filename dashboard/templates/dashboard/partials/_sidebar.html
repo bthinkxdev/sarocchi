@@ -47,9 +47,7 @@
       <a class="nav-link {% if nav_section == 'inventory' %}active{% endif %}"
         href="{% url 'dashboard:inventory-list' %}">
         <i class="ti ti-packages"></i><span class="nav-text">Inventory</span>
-        {% if dashboard_low_stock_count %}
-        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill ms-auto px-2">{{ dashboard_low_stock_count }}</span>
-        {% endif %}
+        <span id="sidebar-inventory-badge" class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill ms-auto px-2 sidebar-inventory-badge" {% if not dashboard_low_stock_count %}style="display: none;"{% endif %}>{{ dashboard_low_stock_count|default:"0" }}</span>
       </a>
     </li>
     <li>

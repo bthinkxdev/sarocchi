@@ -273,7 +273,7 @@
             <span class="text-secondary small">total units</span>
           </div>
           {% else %}
-          <form method="post" action="{% url 'dashboard:inventory-adjust' %}" class="d-flex align-items-center gap-2"
+          <form method="post" action="{% url 'dashboard:inventory-adjust' %}" data-no-loader="true" class="d-flex align-items-center gap-2 no-loader"
                 onsubmit="return handleInlineAdjust(event, 'product', {{ product.pk }}, {{ product.pk }})">
             {% csrf_token %}
             <input type="hidden" name="item_type" value="product">
@@ -313,7 +313,7 @@
           <span class="pill {{ v.status_pill }}" id="pill-variant-{{ v.pk }}">{{ v.status_label }}</span>
         </td>
         <td data-label="Stock" class="py-2">
-          <form method="post" action="{% url 'dashboard:inventory-adjust' %}" class="d-flex align-items-center gap-2"
+          <form method="post" action="{% url 'dashboard:inventory-adjust' %}" data-no-loader="true" class="d-flex align-items-center gap-2 no-loader"
                 onsubmit="return handleInlineAdjust(event, 'variant', {{ v.pk }}, {{ product.pk }})">
             {% csrf_token %}
             <input type="hidden" name="item_type" value="variant">
@@ -384,16 +384,27 @@
 {% block extra_js %}
 <script>
 function handleInlineAdjust(event, itemType, itemId, parentProductId) {
-  event.preventDefault();
-  const form = event.target;
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
   const btn = document.getElementById(`btn-${itemType}-${itemId}`);
-  const origText = btn.textContent;
+  const form = (event && event.target && event.target.tagName === 'FORM')
+    ? event.target
+    : (btn ? btn.closest('form') : document.getElementById(`btn-${itemType}-${itemId}`)?.closest('form'));
+
+  if (!form || !btn) return false;
+
+  delete form.dataset.loaderActive;
+  form.removeAttribute('data-loader-active');
+
+  const origText = 'Save';
 
   btn.disabled = true;
   btn.textContent = '...';
 
   const formData = new FormData(form);
-  const csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+  const csrf = form.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
 
   fetch(form.action, {
     method: 'POST',
@@ -403,13 +414,21 @@ function handleInlineAdjust(event, itemType, itemId, parentProductId) {
     },
     body: formData,
   })
-  .then(res => res.json())
+  .then(res => {
+    if (!res.ok) {
+      throw new Error(`Server returned ${res.status}`);
+    }
+    return res.json();
+  })
   .then(data => {
     btn.disabled = false;
-    btn.textContent = 'Saved!';
-    setTimeout(() => { btn.textContent = origText; }, 1500);
+    delete form.dataset.loaderActive;
+    form.removeAttribute('data-loader-active');
 
     if (data.success) {
+      btn.textContent = 'Saved!';
+      setTimeout(() => { btn.textContent = origText; }, 1500);
+
       const pill = document.getElementById(itemType === 'variant' ? `pill-variant-${itemId}` : `product-pill-${itemId}`);
       if (pill) {
         pill.className = `pill ${data.status_pill}`;
@@ -421,13 +440,32 @@ function handleInlineAdjust(event, itemType, itemId, parentProductId) {
         if (totalStockEl && data.parent_stock !== undefined) {
           totalStockEl.textContent = data.parent_stock;
         }
+        if (data.parent_status_label && data.parent_status_pill) {
+          const parentPill = document.getElementById(`product-pill-${parentProductId}`);
+          if (parentPill) {
+            parentPill.className = `pill ${data.parent_status_pill}`;
+            parentPill.textContent = data.parent_status_label;
+          }
+        }
       }
+
+      if (data.low_stock_count !== undefined) {
+        document.querySelectorAll('#sidebar-inventory-badge, .sidebar-inventory-badge').forEach(badge => {
+          badge.textContent = data.low_stock_count;
+          badge.style.display = data.low_stock_count > 0 ? '' : 'none';
+        });
+      }
+    } else {
+      btn.textContent = origText;
+      if (data.error) alert(data.error);
     }
   })
-  .catch(() => {
+  .catch((err) => {
+    console.error('Inventory adjust error:', err);
     btn.disabled = false;
     btn.textContent = origText;
-    form.submit();
+    delete form.dataset.loaderActive;
+    form.removeAttribute('data-loader-active');
   });
 
   return false;

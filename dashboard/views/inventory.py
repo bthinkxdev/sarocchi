@@ -157,6 +157,21 @@ def inventory_adjust_stock(request: HttpRequest) -> HttpResponse:
         threshold = variant.low_stock_threshold
         variant.product.refresh_from_db(fields=["stock_quantity"])
         parent_stock = variant.product.stock_quantity
+
+        variants = list(variant.product.variants.all())
+        if any(v.stock_quantity == 0 for v in variants):
+            if all(v.stock_quantity == 0 for v in variants):
+                parent_status_label = "Out of stock"
+                parent_status_pill = "pill-red"
+            else:
+                parent_status_label = "Some out of stock"
+                parent_status_pill = "pill-red"
+        elif any(v.stock_quantity <= v.low_stock_threshold for v in variants):
+            parent_status_label = "Low stock"
+            parent_status_pill = "pill-amber"
+        else:
+            parent_status_label = f"{parent_stock} in stock"
+            parent_status_pill = "pill-green"
     elif item_type == "product":
         product = get_object_or_404(Product, pk=item_pk)
         product.stock_quantity = new_stock
@@ -164,6 +179,8 @@ def inventory_adjust_stock(request: HttpRequest) -> HttpResponse:
         sku = product.sku
         threshold = product.low_stock_threshold
         parent_stock = product.stock_quantity
+        parent_status_label = None
+        parent_status_pill = None
     else:
         if is_ajax:
             return JsonResponse({"success": False, "error": "Invalid item type."}, status=400)
@@ -180,6 +197,20 @@ def inventory_adjust_stock(request: HttpRequest) -> HttpResponse:
         status_label = f"{new_stock} in stock"
         status_pill = "pill-green"
 
+    if item_type == "product":
+        parent_status_label = status_label
+        parent_status_pill = status_pill
+
+    low_stock_count = (
+        Product.objects.filter(is_active=True)
+        .filter(
+            Q(variants__stock_quantity__lte=F("variants__low_stock_threshold"))
+            | Q(variants__isnull=True, stock_quantity__lte=F("low_stock_threshold"))
+        )
+        .distinct()
+        .count()
+    )
+
     msg = f"Stock updated for {sku} to {new_stock}."
     if is_ajax:
         return JsonResponse({
@@ -188,6 +219,9 @@ def inventory_adjust_stock(request: HttpRequest) -> HttpResponse:
             "status_label": status_label,
             "status_pill": status_pill,
             "parent_stock": parent_stock,
+            "parent_status_label": parent_status_label,
+            "parent_status_pill": parent_status_pill,
+            "low_stock_count": low_stock_count,
             "message": msg,
         })
 

@@ -35,18 +35,33 @@
   </div>
 </div>
 
-<div class="row g-3 mb-3">
-  <div class="col-12 col-sm-6 col-md-3">
-    <div class="card h-100"><div class="card-body p-4"><h6 class="mb-3">Revenue (range)</h6><h3 class="fw-bold mb-0">{{ total_revenue|floatformat:2 }}</h3></div></div>
+<div class="row g-3 mb-3 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-5">
+  <div class="col">
+    <div class="card h-100"><div class="card-body p-3"><h6 class="text-secondary small mb-2">Revenue (range)</h6><h3 class="fw-bold mb-0">{{ total_revenue|floatformat:2 }}</h3></div></div>
   </div>
-  <div class="col-12 col-sm-6 col-md-3">
-    <div class="card h-100"><div class="card-body p-4"><h6 class="mb-3">Orders (range)</h6><h3 class="fw-bold mb-0">{{ total_orders }}</h3></div></div>
+  <div class="col">
+    <div class="card h-100"><div class="card-body p-3"><h6 class="text-secondary small mb-2">Orders (range)</h6><h3 class="fw-bold mb-0">{{ total_orders }}</h3></div></div>
   </div>
-  <div class="col-12 col-sm-6 col-md-3">
-    <div class="card h-100"><div class="card-body p-4"><h6 class="mb-3">Today's Revenue</h6><h3 class="fw-bold mb-0">{{ summary.today_revenue|floatformat:2 }}</h3></div></div>
+  <div class="col">
+    <div class="card h-100"><div class="card-body p-3"><h6 class="text-secondary small mb-2">Today's Revenue</h6><h3 class="fw-bold mb-0">{{ summary.today_revenue|floatformat:2 }}</h3></div></div>
   </div>
-  <div class="col-12 col-sm-6 col-md-3">
-    <div class="card h-100"><div class="card-body p-4"><h6 class="mb-3">Low Stock</h6><h3 class="fw-bold mb-0">{{ summary.low_stock_alert_count }}</h3></div></div>
+  <div class="col">
+    <div class="card h-100">
+      <div class="card-body p-3">
+        <h6 class="text-secondary small mb-2"><i class="ti ti-alert-triangle text-warning me-1"></i>Low Stock</h6>
+        <h3 class="fw-bold text-warning mb-1">{{ summary.low_stock_alert_count }}</h3>
+        <a href="{% url 'dashboard:inventory-list' %}?status=low" class="text-secondary small text-decoration-none">View products &rarr;</a>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card h-100">
+      <div class="card-body p-3">
+        <h6 class="text-secondary small mb-2"><i class="ti ti-circle-x text-danger me-1"></i>Out of Stock</h6>
+        <h3 class="fw-bold text-danger mb-1">{{ summary.out_of_stock_count }}</h3>
+        <a href="{% url 'dashboard:inventory-list' %}?status=out" class="text-secondary small text-decoration-none">View products &rarr;</a>
+      </div>
+    </div>
   </div>
 </div>
 

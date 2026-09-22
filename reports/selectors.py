@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from django.core.cache import cache
 from django.core.paginator import Paginator
-from django.db.models import Count, Sum, F
+from django.db.models import Count, Sum, F, Q
 from django.utils import timezone
 from decimal import Decimal
 
@@ -153,11 +153,24 @@ def get_admin_dashboard_summary() -> dict[str, Any]:
     yesterday = today - timedelta(days=1)
 
     yesterday_report = DailySalesReport.objects.filter(report_date=yesterday).first()
-    low_stock_count = Product.objects.filter(
-        is_active=True,
-        stock_quantity__lte=F("low_stock_threshold"),
-        stock_quantity__gt=0,
-    ).count()
+    strictly_low_stock = (
+        Product.objects.filter(is_active=True)
+        .filter(
+            Q(variants__stock_quantity__lte=F("variants__low_stock_threshold"), variants__stock_quantity__gt=0)
+            | Q(variants__isnull=True, stock_quantity__lte=F("low_stock_threshold"), stock_quantity__gt=0)
+        )
+        .distinct()
+        .count()
+    )
+    out_of_stock = (
+        Product.objects.filter(is_active=True)
+        .filter(
+            Q(variants__stock_quantity=0)
+            | Q(variants__isnull=True, stock_quantity=0)
+        )
+        .distinct()
+        .count()
+    )
 
     today_orders = Order.objects.filter(
         created_at__date=today, order_status__in=REVENUE_ORDER_STATUSES
@@ -172,7 +185,9 @@ def get_admin_dashboard_summary() -> dict[str, Any]:
         "today_order_count": today_agg["order_count"] or 0,
         "yesterday_revenue": yesterday_report.revenue if yesterday_report else 0,
         "yesterday_order_count": yesterday_report.order_count if yesterday_report else 0,
-        "low_stock_alert_count": low_stock_count,
+        "low_stock_alert_count": strictly_low_stock,
+        "out_of_stock_count": out_of_stock,
+        "reorder_needed_count": strictly_low_stock + out_of_stock,
     }
     cache.set(ADMIN_DASHBOARD_CACHE_KEY, summary, ADMIN_DASHBOARD_CACHE_TTL)
     return summary

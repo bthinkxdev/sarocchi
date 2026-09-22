@@ -122,22 +122,54 @@ def get_top_products(*, limit: int = 5) -> list[dict[str, Any]]:
 
 def get_low_stock_products(*, limit: int = 5) -> list[dict[str, Any]]:
     """Active products at or below their low-stock threshold (but not completely out of stock)."""
+    from django.db.models import F, Q
     products = (
-        Product.objects.filter(is_active=True, stock_quantity__lte=F("low_stock_threshold"), stock_quantity__gt=0)
+        Product.objects.filter(is_active=True)
+        .filter(
+            Q(variants__stock_quantity__lte=F("variants__low_stock_threshold"), variants__stock_quantity__gt=0)
+            | Q(variants__isnull=True, stock_quantity__lte=F("low_stock_threshold"), stock_quantity__gt=0)
+        )
         .select_related("category")
-        .prefetch_related("images")
-        .order_by("stock_quantity")[:limit]
+        .prefetch_related("images", "variants__attribute_values")
+        .distinct()[:limit]
     )
-    return [
-        {
-            "name": p.name,
-            "sku": p.sku,
-            "stock": p.stock_quantity,
+    result = []
+    for p in products:
+        low_variant = [
+            v for v in p.variants.all()
+            if v.stock_quantity <= v.low_stock_threshold and v.stock_quantity > 0
+        ]
+        if low_variant:
+            low_variant.sort(key=lambda v: v.stock_quantity)
+            v = low_variant[0]
+            attr_vals = [av.value for av in v.attribute_values.all()]
+            if attr_vals:
+                var_label = " - ".join(attr_vals)
+            else:
+                name = (v.name or "").strip()
+                prefix = f"{p.name} - "
+                if name.startswith(prefix):
+                    name = name[len(prefix):].strip()
+                var_label = name if (name and name != v.sku_suffix) else ""
+
+            display_name = f"{p.name} - {var_label}" if var_label else p.name
+            sku = v.sku_suffix or p.sku
+            stock = v.stock_quantity
+        else:
+            display_name = p.name
+            sku = p.sku
+            stock = p.stock_quantity
+
+        result.append({
+            "name": display_name,
+            "sku": sku,
+            "stock": stock,
             "category": p.category.name if p.category_id else "",
             "image": _primary_image_url(p),
-        }
-        for p in products
-    ]
+        })
+
+    result.sort(key=lambda x: x["stock"])
+    return result
 
 
 def get_recent_orders(*, limit: int = 6) -> list[Order]:

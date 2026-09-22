@@ -61,6 +61,9 @@
       var btn = event.target.closest && event.target.closest('button[type="submit"], input[type="submit"]');
       if (btn) {
         var form = btn.closest('form');
+        if (form && (form.hasAttribute('data-no-loader') || form.classList.contains('no-loader') || form.dataset.ajax === 'true')) {
+          return;
+        }
         if (form && form.dataset.loaderActive) {
           event.preventDefault();
           event.stopPropagation();
@@ -72,6 +75,9 @@
     document.addEventListener("submit", function(event) {
       var form = event.target;
       if (form && form.tagName === "FORM" && form.method && form.method.toLowerCase() === "post") {
+        if (form.hasAttribute('data-no-loader') || form.classList.contains('no-loader') || form.dataset.ajax === 'true') {
+          return;
+        }
         if (form.dataset.loaderActive) {
           event.preventDefault();
           return;
