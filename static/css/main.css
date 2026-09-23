@@ -1351,16 +1351,9 @@ body.mobile-search-open {
   box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.12);
 }
 
-.zoom-container {
-  cursor: zoom-in;
-}
-
-.zoom-image {
-  transition: transform 0.35s ease;
-}
-
-.zoom-container:hover .zoom-image {
-  transform: scale(1.04);
+/* PDP gallery viewer modal */
+.pdp-modal-thumb-btn.border-primary {
+  box-shadow: 0 0 8px rgba(14, 165, 233, 0.5);
 }
 
 .jm-pdp-buybox__meta,
