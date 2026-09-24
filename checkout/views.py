@@ -245,6 +245,7 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     enable_cod = getattr(settings, "enable_cod", True)
     enable_razorpay = getattr(settings, "enable_razorpay", True)
     enable_cybersource = getattr(settings, "enable_cybersource", True)
+    enable_afterpay = getattr(settings, "enable_afterpay", True)
 
     from payments.adapters.concrete import _get_razorpay_credentials, _get_cybersource_credentials
     razorpay_key, razorpay_secret = _get_razorpay_credentials()
@@ -259,6 +260,9 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
                 continue
         if key.startswith("cybersource"):
             if not enable_cybersource or not cs_merchant_id or not cs_key_id or not cs_secret_key:
+                continue
+        if key == "afterpay":
+            if not enable_afterpay:
                 continue
         available_gateways[key] = adapter
         
@@ -539,6 +543,14 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             status=200,
         )
 
+    if gateway_key == "afterpay" and not getattr(settings, "enable_afterpay", True):
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"gateway_key": ["Afterpay payment is currently disabled."]}},
+            status=200,
+        )
+
     summary = get_cart_summary(cart=cart, skip_delivery_charge_calculation=True)
     from delivery.selectors import get_delivery_charge
     if not address and session.address:
@@ -606,6 +618,14 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
 
     if gateway_key.startswith("cybersource"):
         pay_url = reverse("checkout:cybersource-pay", kwargs={"order_id": order.pk})
+        if request.headers.get("HX-Request"):
+            response = HttpResponse()
+            response["HX-Redirect"] = pay_url
+            return response
+        return redirect(pay_url)
+
+    if gateway_key == "afterpay":
+        pay_url = reverse("checkout:afterpay-pay", kwargs={"order_id": order.pk})
         if request.headers.get("HX-Request"):
             response = HttpResponse()
             response["HX-Redirect"] = pay_url
@@ -990,3 +1010,121 @@ def cybersource_process_token_view(request: HttpRequest) -> HttpResponse:
     except Exception as e:
         logger.exception("Failed to process transient token")
         return JsonResponse({'success': False, 'error': 'Internal processing error'}, status=500)
+
+
+@never_cache
+@require_GET
+def afterpay_pay_view(request: HttpRequest, order_id: int) -> HttpResponse:
+    """
+    Handle redirection to Afterpay hosted checkout or local sandbox simulator.
+    """
+    from decimal import Decimal
+    from orders.models import Order, OrderStatus
+    from payments.models import PaymentTransaction
+    from django.shortcuts import get_object_or_404, redirect
+
+    order = get_object_or_404(Order, pk=order_id)
+    if order.order_status != OrderStatus.CHECKOUT_PENDING:
+        return redirect("catalog:plp")
+
+    payment_tx = PaymentTransaction.objects.filter(order=order, gateway_key="afterpay").last()
+    if not payment_tx:
+        return redirect("checkout:checkout")
+
+    request.session["afterpay_order_pk"] = order.pk
+
+    redirect_url = payment_tx.metadata.get("redirect_url", "")
+    is_simulation = payment_tx.metadata.get("is_simulation", False)
+
+    #if it is a real external Afterpay checkout URL, redirect immediately
+    if redirect_url and not is_simulation and redirect_url.startswith("http"):
+        return redirect(redirect_url)
+
+    #render clean Afterpay payment & sandbox simulator page
+    installment_amount = round(order.total_amount / Decimal("4.0"), 2)
+    return render(
+        request,
+        "checkout/afterpay_pay.html",
+        {
+            "order": order,
+            "payment_tx": payment_tx,
+            "metadata": payment_tx.metadata,
+            "installment_amount": installment_amount,
+            "is_simulation": is_simulation,
+            "token": payment_tx.metadata.get("token") or payment_tx.external_intent_id,
+        },
+    )
+
+
+@require_http_methods(["GET", "POST"])
+@csrf_exempt
+def afterpay_callback_view(request: HttpRequest) -> HttpResponse:
+    """
+    Handle return from Afterpay (or Afterpay simulator).
+    """
+    from orders.models import Order, OrderStatus
+    from payments.models import PaymentTransaction
+    from payments.services import confirm_payment_success, confirm_payment_failed
+    from django.shortcuts import redirect
+    from django.contrib import messages
+
+    status = (request.GET.get("status") or request.POST.get("status") or "").upper()
+    order_token = request.GET.get("orderToken") or request.POST.get("orderToken") or ""
+    order_id = request.GET.get("order_id") or request.POST.get("order_id") or request.session.get("afterpay_order_pk")
+
+    order = None
+    if order_id:
+        order = Order.objects.filter(pk=order_id).first()
+    elif request.user.is_authenticated:
+        order = Order.objects.filter(user=request.user).last()
+
+    if not order:
+        return redirect("checkout:checkout")
+
+    payment_tx = PaymentTransaction.objects.filter(order=order, gateway_key="afterpay").last()
+    if not payment_tx:
+        return redirect("checkout:checkout")
+
+    if order.order_status != OrderStatus.CHECKOUT_PENDING:
+        request.session.pop("afterpay_order_pk", None)
+        return redirect("checkout:confirmation", order_id=order.id)
+
+    if status == "SUCCESS":
+        is_sim = (
+            payment_tx.metadata.get("is_simulation", False)
+            or order_token.startswith("afterpay_sim")
+            or order_token.startswith("sim_")
+        )
+        if is_sim:
+            #sandbox simulator instant approval
+            confirm_payment_success(payment_transaction=payment_tx, external_transaction_id=order_token or f"sim_tx_{order.pk}")
+            request.session.pop("afterpay_order_pk", None)
+            return redirect("checkout:confirmation", order_id=order.id)
+        else:
+            #live / sandbox Afterpay Direct API capture
+            from payments.adapters.concrete import AfterpayAdapter
+            adapter = AfterpayAdapter()
+            capture_resp = adapter.capture_order(order_token=order_token, order_id=str(order.pk))
+            capture_status = capture_resp.get("status", "").upper()
+
+            if capture_status in ("APPROVED", "CAPTURED"):
+                confirm_payment_success(
+                    payment_transaction=payment_tx,
+                    external_transaction_id=capture_resp.get("id", order_token),
+                )
+                request.session.pop("afterpay_order_pk", None)
+                return redirect("checkout:confirmation", order_id=order.id)
+            else:
+                confirm_payment_failed(payment_transaction=payment_tx)
+                err_msg = capture_resp.get("message") or "Afterpay payment authorization was declined."
+                messages.error(request, err_msg)
+                return redirect("checkout:checkout")
+
+    elif status == "CANCELLED":
+        messages.info(request, "Afterpay payment was cancelled. Please choose a payment method to complete your purchase.")
+        return redirect("checkout:checkout")
+    else:
+        confirm_payment_failed(payment_transaction=payment_tx)
+        messages.error(request, "Afterpay payment could not be completed.")
+        return redirect("checkout:checkout")
+

@@ -368,6 +368,33 @@ class SiteSettings(TimeStampedModel):
         verbose_name="CyberSource Environment",
         help_text="Run environment for CyberSource API requests.",
     )
+    enable_afterpay = models.BooleanField(
+        default=True,
+        verbose_name="Enable Afterpay",
+        help_text="Enable or disable Afterpay payment option at checkout.",
+    )
+    afterpay_merchant_id = models.CharField(
+        max_length=120,
+        blank=True,
+        verbose_name="Afterpay Merchant ID",
+        help_text="Afterpay Merchant ID.",
+    )
+    afterpay_secret_key = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Afterpay Secret Key",
+        help_text="Afterpay Secret Key.",
+    )
+    afterpay_environment = models.CharField(
+        max_length=50,
+        default="global-api-sandbox.afterpay.com",
+        choices=[
+            ("global-api-sandbox.afterpay.com", "Test"),
+            ("global-api.afterpay.com", "Live"),
+        ],
+        verbose_name="Afterpay Environment",
+        help_text="Run environment for Afterpay API requests.",
+    )
 
     class Meta:
         verbose_name = "Site settings"

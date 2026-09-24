@@ -21,4 +21,6 @@ urlpatterns = [
     path("pay/cybersource/<int:order_id>/", views.cybersource_pay_view, name="cybersource-pay"),
     path("pay/cybersource/process/", views.cybersource_process_token_view, name="cybersource-process-token"),
     path("pay/cybersource/return/", views.cybersource_redirect_view, name="cybersource-return"),
+    path("pay/afterpay/<int:order_id>/", views.afterpay_pay_view, name="afterpay-pay"),
+    path("pay/afterpay/callback/", views.afterpay_callback_view, name="afterpay-callback"),
 ]

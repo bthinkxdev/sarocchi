@@ -671,6 +671,9 @@ class SiteSettingsForm(forms.ModelForm):
         "cybersource_key_id",
         "cybersource_secret_key",
         "cybersource_run_environment",
+        "afterpay_merchant_id",
+        "afterpay_secret_key",
+        "afterpay_environment",
     ]
 
     class Meta:
@@ -703,9 +706,13 @@ class SiteSettingsForm(forms.ModelForm):
             "cybersource_key_id",
             "cybersource_secret_key",
             "cybersource_run_environment",
+            "afterpay_merchant_id",
+            "afterpay_secret_key",
+            "afterpay_environment",
         ]
         widgets = {
             "cybersource_secret_key": forms.PasswordInput(render_value=True),
+            "afterpay_secret_key": forms.PasswordInput(render_value=True),
         }
         labels = {
             "vendor_email": "Email",
@@ -732,6 +739,10 @@ class SiteSettingsForm(forms.ModelForm):
             self.fields.pop("cybersource_key_id", None)
             self.fields.pop("cybersource_secret_key", None)
             self.fields.pop("cybersource_run_environment", None)
+        if self.instance and not getattr(self.instance, "enable_afterpay", True):
+            self.fields.pop("afterpay_merchant_id", None)
+            self.fields.pop("afterpay_secret_key", None)
+            self.fields.pop("afterpay_environment", None)
         for field_name, field in self.fields.items():
             if field_name != "logo":
                 if isinstance(field.widget, forms.CheckboxInput):

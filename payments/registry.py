@@ -15,7 +15,7 @@ from payments.adapters.concrete import (
     RazorpayNetbankingAdapter,
     RazorpayWalletAdapter,
     CyberSourceCardAdapter,
-    CyberSourceAfterpayAdapter,
+    AfterpayAdapter,
 )
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ PAYMENT_GATEWAYS: dict[str, PaymentGatewayAdapter] = {
     RazorpayNetbankingAdapter.key: RazorpayNetbankingAdapter(),
     RazorpayWalletAdapter.key: RazorpayWalletAdapter(),
     CyberSourceCardAdapter.key: CyberSourceCardAdapter(),
-    CyberSourceAfterpayAdapter.key: CyberSourceAfterpayAdapter(),
+    AfterpayAdapter.key: AfterpayAdapter(),
     CashOnDeliveryAdapter.key: CashOnDeliveryAdapter(),
 }
 
