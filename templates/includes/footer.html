@@ -10,10 +10,10 @@
             {% else %}
               <img src="{% static 'dashboard/images/logo.png' %}" alt="" width="36" height="36">
             {% endif %}
-            <span>{{ site_settings.site_name|default:"Yarn Guy" }}</span>
+            <span>{{ site_settings.site_name|default:"Sarocchi Luxe Designs" }}</span>
           </a>
         </div>
-        <p class="jm-footer__tagline">{% trans "Premium Gym Wear & Activewear - Yarn Guy" %}</p>
+        <p class="jm-footer__tagline">{% trans "Luxury Sarees & Fine Jewellery — Handcrafted Elegance for New Zealand" %}</p>
         <div class="jm-footer__social">
           {% if site_settings.facebook_url %}<a href="{{ site_settings.facebook_url }}" aria-label="Facebook" rel="noopener">Facebook</a>{% endif %}
           {% if site_settings.instagram_url %}<a href="{{ site_settings.instagram_url }}" aria-label="Instagram" rel="noopener">Instagram</a>{% endif %}
@@ -60,6 +60,6 @@
         {% endif %}
       </div>
     </div>
-    <p class="footer-copy text-center mb-0">&copy; {% now "Y" %} YARN GUY. {% trans "All rights reserved." %}</p>
+    <p class="footer-copy text-center mb-0">&copy; {% now "Y" %} {{ site_settings.site_name|default:"SAROCCHI LUXE DESIGNS" }}. {% trans "All rights reserved." %}</p>
   </div>
 </footer>

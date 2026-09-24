@@ -32,12 +32,12 @@
           {{ site_settings.whatsapp_number }}
         </a>
         {% else %}
-        <a class="jm-topbar__link" href="tel:+971503131065">
+        <a class="jm-topbar__link" href="tel:+64220904112">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path
               d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
           </svg>
-          +971 50 313 1065
+          +64 22 090 4112
         </a>
         {% endif %}
         <a class="jm-topbar__cta" href="{% url 'core:contact-us' %}">{% trans "Contact Us" %}</a>
@@ -56,11 +56,11 @@
           </svg>
         </button>
 
-        <a class="jm-logo" href="{% url 'cms:homepage' %}" aria-label="YARN GUY">
+        <a class="jm-logo" href="{% url 'cms:homepage' %}" aria-label="{{ site_settings.site_name|default:'SAROCCHI LUXE DESIGNS' }}">
           <img
             src="{% if site_settings.logo %}{{ site_settings.logo.url }}{% else %}{% static 'dashboard/images/logo.png' %}{% endif %}"
             alt="" width="40" height="40" class="jm-logo__mark">
-          <span class="jm-logo__text">YARN GUY</span>
+          <span class="jm-logo__text">{{ site_settings.site_name|default:'SAROCCHI LUXE DESIGNS' }}</span>
         </a>
       </div>
 
@@ -69,7 +69,7 @@
         <div class="jm-search__field">
           <input type="search" id="site-search-input" name="q" class="jm-search__input"
             value="{{ request.GET.q|default:'' }}"
-            placeholder="{% trans 'Search gym wear, activewear, brands...' %}"
+            placeholder="{% trans 'Search sarees, jewellery, collections...' %}"
             hx-get="{% url 'catalog:search-suggest' %}" hx-trigger="keyup changed delay:300ms, search"
             hx-target="#search-suggestions" hx-indicator="#search-suggestions-indicator" hx-swap="innerHTML"
             autocomplete="off" spellcheck="false" role="combobox" aria-controls="search-suggestions"
@@ -218,9 +218,9 @@
   </div>
 </header>
 
-{% with wa=site_settings.whatsapp_number|default:"971503131065" %}
+{% with wa=site_settings.whatsapp_number|default:"64220904112" %}
 <a class="jm-wa-float"
-  href="https://wa.me/{{ wa|cut:'+'|cut:' '|cut:'-' }}?text={{ 'Hi Yarn Guy, I have an enquiry.'|urlencode }}"
+  href="https://wa.me/{{ wa|cut:'+'|cut:' '|cut:'-' }}?text={{ 'Hi Sarocchi Luxe designs, I have an enquiry.'|urlencode }}"
   target="_blank" rel="noopener noreferrer" aria-label="{% trans 'WhatsApp enquiry' %}">
   <span class="jm-wa-float__pulse" aria-hidden="true"></span>
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -242,7 +242,7 @@
         </svg>
         <input type="search" id="mobile-search-input" name="q" class="mobile-search__input"
           value="{{ request.GET.q|default:'' }}"
-          placeholder="{% trans 'Search gym wear, activewear...' %}" hx-get="{% url 'catalog:search-suggest' %}"
+          placeholder="{% trans 'Search sarees, jewellery, collections...' %}" hx-get="{% url 'catalog:search-suggest' %}"
           hx-trigger="keyup changed delay:250ms, search" hx-target="#mobile-search-results" hx-swap="innerHTML"
           autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="{% trans 'Search' %}"
           aria-controls="mobile-search-results">

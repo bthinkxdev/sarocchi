@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n storefront_tags %}
 
-{% block title %}{% trans "My Orders" %} | Yarn Guy{% endblock %}
+{% block title %}{% trans "My Orders" %} | {{ site_settings.site_name|default:"Sarocchi Luxe Designs" }}{% endblock %}
 
 {% block content %}
 <div class="container page-container py-4">
@@ -38,6 +38,8 @@
                 <a href="{% url 'orders:detail' order_id=order.pk %}" class="btn btn-outline-floward btn-sm w-100 mb-2 fw-medium">{% trans "View Details" %}</a>
                 {% if site_settings.enable_delhivery %}
                 <a href="{% if order.delhivery_shipment.waybill_number %}https://www.delhivery.com/track-v2/package/{{ order.delhivery_shipment.waybill_number }}{% else %}https://www.delhivery.com/tracking{% endif %}" target="_blank" class="btn btn-light border btn-sm w-100">{% trans "Track" %}</a>
+                {% elif order.shipping_provider_url %}
+                <a href="{{ order.shipping_provider_url }}" target="_blank" class="btn btn-light border btn-sm w-100">{% trans "Track" %}</a>
                 {% endif %}
               </div>
             </div>

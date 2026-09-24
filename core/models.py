@@ -210,10 +210,10 @@ class SiteSettings(TimeStampedModel):
     and template slugs are stored here.
     """
 
-    site_name = models.CharField(max_length=120, default="Yarn Guy")
+    site_name = models.CharField(max_length=120, default="Sarocchi Luxe Designs")
     logo = models.ImageField(upload_to="site/", blank=True, null=True, verbose_name="Logo")
-    primary_color = models.CharField(max_length=7, default="#0369A1")
-    secondary_color = models.CharField(max_length=7, default="#0B1220")
+    primary_color = models.CharField(max_length=7, default="#1B4D3E")
+    secondary_color = models.CharField(max_length=7, default="#C5A059")
     font_family = models.CharField(max_length=120, default="Inter, sans-serif")
     enable_brands = models.BooleanField(
         default=True,
@@ -221,7 +221,7 @@ class SiteSettings(TimeStampedModel):
         help_text="Enable or disable Brand features across the entire site."
     )
     enable_delhivery = models.BooleanField(
-        default=True,
+        default=False,
         verbose_name="Enable Delhivery",
         help_text="Enable or disable Delhivery shipping integration across the site."
     )

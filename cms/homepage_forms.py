@@ -60,7 +60,7 @@ class PromotionalSectionConfigForm(BaseSectionConfigForm):
         widget=forms.Textarea(
             attrs={
                 "rows": 2,
-                "placeholder": "e.g. Upgrade your training wardrobe with our premium performance activewear.",
+                "placeholder": "e.g. Discover our exquisite bridal sarees and handcrafted heirloom jewellery.",
             }
         ),
     )

@@ -33,8 +33,8 @@ def about_us_view(request: HttpRequest) -> HttpResponse:
     """Render the static About Us page."""
     context = seo_context(
         request=request,
-        title=_("About Us | Yarn Guy"),
-        description=_("Learn more about Yarn Guy and our mission to deliver premium gym wear and activewear."),
+        title=_("About Us | Sarocchi Luxe designs"),
+        description=_("Learn more about Sarocchi Luxe designs and our mission to deliver exquisite luxury sarees and handcrafted fine jewellery to New Zealand."),
     )
     return render(request, "core/about_us.html", context)
 
@@ -95,8 +95,8 @@ def contact_us_view(request: HttpRequest) -> HttpResponse:
 
     context = seo_context(
         request=request,
-        title=_("Contact Us | Yarn Guy"),
-        description=_("Get in touch with Yarn Guy customer support."),
+        title=_("Contact Us | Sarocchi Luxe Designs"),
+        description=_("Get in touch with Sarocchi Luxe Designs customer support in New Zealand."),
     )
     context["form"] = form
     context["captcha_bust"] = int(time.time() * 1000)
@@ -166,8 +166,8 @@ def faq_view(request: HttpRequest) -> HttpResponse:
     """Render the static FAQ page."""
     context = seo_context(
         request=request,
-        title=_("FAQ | Yarn Guy"),
-        description=_("Frequently asked questions about ordering, delivery, and payments at Yarn Guy."),
+        title=_("FAQ | Sarocchi Luxe Designs"),
+        description=_("Frequently asked questions about ordering, delivery, and payments at Sarocchi Luxe Designs."),
     )
     
     from cms.models import FAQItem
@@ -181,8 +181,8 @@ def blog_view(request: HttpRequest) -> HttpResponse:
     """Render the storefront blog page."""
     context = seo_context(
         request=request,
-        title=_("Blog | Yarn Guy"),
-        description=_("Read our latest news and mobile technology articles."),
+        title=_("Blog | Sarocchi Luxe Designs"),
+        description=_("Read our latest styling tips, saree draping guides, and jewellery trends from Sarocchi Luxe Designs."),
     )
     from cms.models import BlogPost
     context["blogs"] = BlogPost.objects.filter(is_published=True)
@@ -198,7 +198,7 @@ def blog_detail_view(request: HttpRequest, slug: str) -> HttpResponse:
     context = seo_context(
         request=request,
         obj=post,
-        title=f"{post.title} | Yarn Guy",
+        title=f"{post.title} | Sarocchi Luxe Designs",
         description=post.meta_description or post.excerpt or post.title,
     )
     context["post"] = post
@@ -214,7 +214,7 @@ def page_view(request: HttpRequest, slug: str) -> HttpResponse:
     context = seo_context(
         request=request,
         obj=page,
-        title=f"{page.title} | Yarn Guy",
+        title=f"{page.title} | Sarocchi Luxe Designs",
         description=page.meta_description or page.title,
     )
     context["page"] = page

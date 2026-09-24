@@ -129,7 +129,7 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
         if col_slug == "all":
             active_collection = {"name": "All Collections", "slug": "all"}
             title = "All Collections"
-            description = "Browse all curated activewear collections and outfits."
+            description = "Browse all curated saree and fine jewellery collections."
         else:
             from catalog.models import Collection
 
@@ -145,18 +145,18 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
         title = f'Search Results for "{q}"'
         description = f'Products matching "{q}"'
     elif filters.get("flash_sale"):
-        title = "Flash Sales & Offers"
-        description = "Shop limited-time flash sales and exclusive discounts on premium gym wear."
+        title = "Festive Sales & Offers"
+        description = "Shop limited-time festive offers and exclusive discounts on luxury sarees and jewellery."
     else:
         title = (
-            resolve_meta_title(obj=active_cat, fallback="Shop All | Yarn Guy")
+            resolve_meta_title(obj=active_cat, fallback="Shop All | Sarocchi Luxe Designs")
             if active_cat
-            else "Shop All | Yarn Guy"
+            else "Shop All | Sarocchi Luxe Designs"
         )
         description = (
-            f"Browse {active_cat.name} — premium gym wear and activewear."
+            f"Browse {active_cat.name} — luxury sarees and handcrafted jewellery."
             if active_cat
-            else "Browse Premium Gym Wear & Activewear - Yarn Guy."
+            else "Browse Premium Sarees & Handcrafted Jewellery - Sarocchi Luxe Designs."
         )
 
 
@@ -164,7 +164,7 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
     context = seo_context(
         request=request,
         obj=active_cat,
-        title=f"{title} | Yarn Guy",
+        title=f"{title} | Sarocchi Luxe Designs",
         description=description,
         canonical_url=build_plp_canonical_url(request=request, category_slug=category_slug),
     )
@@ -260,8 +260,8 @@ def pdp_view(request: HttpRequest, slug: str) -> HttpResponse:
     context = seo_context(
         request=request,
         obj=product,
-        title=f"{product.name} | Yarn Guy",
-        description=f"{product.name} — Premium gym wear and active wear from Yarn Guy",
+        title=f"{product.name} | Sarocchi Luxe Designs",
+        description=f"{product.name} — Luxury Sarees & Fine Jewellery from Sarocchi Luxe Designs",
     )
     context.update(
         {

@@ -88,7 +88,10 @@ def inquiry_detail(request: HttpRequest, pk: int) -> HttpResponse:
     from django.utils import timezone
     inquiry = get_object_or_404(ContactInquiry, pk=pk)
     
-    subject = inquiry.reply_subject or "Re: Your inquiry to YARN GUY"
+    from core.services import get_site_settings
+    site_settings = get_site_settings()
+    site_name = site_settings.site_name or "Sarocchi Luxe Designs"
+    subject = inquiry.reply_subject or f"Re: Your inquiry to {site_name}"
     message_text = inquiry.reply_message or ""
     reply_sent = bool(inquiry.replied_at)
 

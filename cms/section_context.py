@@ -271,7 +271,7 @@ def _marketing_features(config: dict[str, Any]) -> dict[str, Any]:
         "badge": config.get("badge", "SPECIAL PROMOTION"),
         "subtitle": config.get(
             "subtitle",
-            "Elevate your workout with our premium high-performance activewear collection.",
+            "Discover luxury handloom sarees and handcrafted jewellery for your special celebrations.",
         ),
         "button_text": config.get("button_text") or "Shop Now",
         "image_url": image_url,

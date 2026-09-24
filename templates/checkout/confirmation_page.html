@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n storefront_tags %}
 
-{% block title %}{% trans "Order Confirmed" %} | Yarn Guy{% endblock %}
+{% block title %}{% trans "Order Confirmed" %} | {{ site_settings.site_name|default:"Sarocchi Luxe Designs" }}{% endblock %}
 
 {% block content %}
 <div class="container page-container py-5">
@@ -85,6 +85,8 @@
             {% endif %}
             {% if site_settings.enable_delhivery %}
             <a href="{% if order.delhivery_shipment.waybill_number %}https://www.delhivery.com/track-v2/package/{{ order.delhivery_shipment.waybill_number }}{% else %}https://www.delhivery.com/tracking{% endif %}" target="_blank" class="btn btn-floward px-4 py-2 fw-medium rounded-pill shadow-sm" style="transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">{% trans "Track Order" %}</a>
+            {% elif order.shipping_provider_url %}
+            <a href="{{ order.shipping_provider_url }}" target="_blank" class="btn btn-floward px-4 py-2 fw-medium rounded-pill shadow-sm" style="transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">{% trans "Track Order" %}</a>
             {% endif %}
             <a href="{% url 'catalog:plp' %}" class="btn btn-outline-floward px-4 py-2 fw-medium rounded-pill" style="transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">{% trans "Continue Shopping" %}</a>
           </div>

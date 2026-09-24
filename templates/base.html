@@ -12,11 +12,11 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-  <meta name="theme-color" content="#0369A1">
+  <meta name="theme-color" content="#1B4D3E">
 
   <meta name="csrf-token" content="{{ csrf_token }}">
 
-  <title>{% block title %}{{ seo_title|default:"Yarn Guy" }}{% endblock %}</title>
+  <title>{% block title %}{{ seo_title|default:site_settings.site_name|default:"Sarocchi Luxe Designs" }}{% endblock %}</title>
 
   {% if site_settings.google_analytics_id %}
   <!--google tag (gtag.js)-->
@@ -75,7 +75,7 @@
   <div id="jm-loader" class="jm-loader" role="status" aria-live="polite" aria-label="{% trans 'Loading' %}">
     <div class="jm-loader__veil" aria-hidden="true"></div>
     <img class="jm-loader__media"
-         src="{% static 'img/loading.svg' %}"
+         src="{% static 'img/loading.svg' %}?v=2"
          alt=""
          width="128"
          height="128"

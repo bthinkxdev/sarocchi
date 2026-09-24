@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "Razorpay Payment" %} | Yarn Guy{% endblock %}
+{% block title %}{% trans "Secure Payment" %} | {{ site_settings.site_name|default:"Sarocchi Luxe Designs" }}{% endblock %}
 
 {% block content %}
 <div class="container page-container py-5">
@@ -62,7 +62,7 @@
       "key": "{{ razorpay_key_id }}",
       "amount": "{{ amount_in_paise }}",
       "currency": "{{ currency_code }}",
-      "name": "Yarn Guy",
+      "name": "{{ site_settings.site_name|default:'Sarocchi Luxe Designs' }}",
       "description": "Payment for Order #{{ order.order_number }}",
       "order_id": "{{ razorpay_order_id }}",
       "handler": function (response) {
