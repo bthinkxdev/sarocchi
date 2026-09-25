@@ -129,6 +129,15 @@ class ProductForm(SlugAutoMixin):
         self.fields["tags"].widget.attrs["class"] = "form-select form-control"
         self.fields["labels"].widget.attrs["class"] = "form-select form-control"
 
+    def clean_sku(self):
+        sku = (self.cleaned_data.get("sku") or "").strip()
+        pk = self.instance.pk if self.instance else None
+        if Product.objects.filter(sku__iexact=sku).exclude(pk=pk).exists():
+            raise forms.ValidationError("Product with this SKU already exists.")
+        if ProductVariant.objects.filter(sku_suffix__iexact=sku).exclude(product_id=pk).exists():
+            raise forms.ValidationError("This SKU is already in use by a variant.")
+        return sku
+
     def clean(self):
         cleaned = super().clean()
         has_variants = self.data.get("has_variants") == "on"

@@ -75,7 +75,7 @@
     document.addEventListener("submit", function(event) {
       var form = event.target;
       if (form && form.tagName === "FORM" && form.method && form.method.toLowerCase() === "post") {
-        if (form.hasAttribute('data-no-loader') || form.classList.contains('no-loader') || form.dataset.ajax === 'true') {
+        if (event.defaultPrevented || form.hasAttribute('data-no-loader') || form.classList.contains('no-loader') || form.dataset.ajax === 'true') {
           return;
         }
         if (form.dataset.loaderActive) {

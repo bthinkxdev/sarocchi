@@ -225,9 +225,10 @@ def _render_product_form(request, product, mode):
                 v_base_prices = request.POST.getlist("variant_base_price[]")
                 v_mrps = request.POST.getlist("variant_mrp[]")
                 v_purchase_prices = request.POST.getlist("variant_purchase_price[]")
+                v_names = request.POST.getlist("variant_name[]")
                 
                 for i in range(len(v_sku_suffixes)):
-                    suffix_name = v_sku_suffixes[i] if v_sku_suffixes[i] else f"Variant {i+1}"
+                    suffix_name = v_names[i].strip() if i < len(v_names) and v_names[i].strip() else (v_sku_suffixes[i] if v_sku_suffixes[i] else f"Variant {i+1}")
                     
                     if i >= len(v_base_prices) or not str(v_base_prices[i]).strip():
                         messages.error(request, f"Base price is required for variant '{suffix_name}'.")
@@ -314,7 +315,8 @@ def _render_product_form(request, product, mode):
                             
                         dynamic_attrs_str = v_dynamic_attributes[i] if i < len(v_dynamic_attributes) else ""
                         
-                        variant_name = f"{product.name} - {sku_suffix}" if sku_suffix else product.name
+                        default_name = f"{product.name} - {sku_suffix}" if sku_suffix else product.name
+                        variant_name = v_names[i].strip() if i < len(v_names) and v_names[i].strip() else default_name
                         
                         variant = ProductVariant.objects.filter(product=product, sku_suffix=sku_suffix).first()
                         if variant:
@@ -403,10 +405,6 @@ def _render_product_form(request, product, mode):
                     
                 from django.utils.http import url_has_allowed_host_and_scheme
                 next_url = request.POST.get("next") or request.GET.get("next")
-                if not next_url:
-                    referer = request.META.get("HTTP_REFERER")
-                    if referer and "/dashboard/" in referer and "edit" not in referer:
-                        next_url = referer
                 if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
                     return redirect(next_url)
                 return redirect("dashboard:product-list")
@@ -445,6 +443,7 @@ def _render_product_form(request, product, mode):
             v_mrps = request.POST.getlist("variant_mrp[]")
             v_purchase_prices = request.POST.getlist("variant_purchase_price[]")
             v_dynamic_attributes = request.POST.getlist("variant_dynamic_attributes[]")
+            v_names = request.POST.getlist("variant_name[]")
             
             for i in range(len(v_sku_suffixes)):
                 dynamic_attrs_str = v_dynamic_attributes[i] if i < len(v_dynamic_attributes) else ""
@@ -461,7 +460,7 @@ def _render_product_form(request, product, mode):
                         if val_name not in dynamic_options[attr_name]:
                             dynamic_options[attr_name].append(val_name)
                             
-                name = " - ".join(name_parts)
+                name = v_names[i].strip() if i < len(v_names) and v_names[i].strip() else " - ".join(name_parts)
                 if not name:
                     name = v_sku_suffixes[i] if i < len(v_sku_suffixes) and v_sku_suffixes[i] else f"Variant {i+1}"
                 
@@ -491,13 +490,16 @@ def _render_product_form(request, product, mode):
                 attr_str = "|".join([f"{av.attribute.name}:{av.value}" for av in variant.attribute_values.all()])
                 
                 attr_vals = [av.value for av in variant.attribute_values.all()]
-                if attr_vals:
+                if variant.name:
+                    prefix = f"{product.name} - "
+                    if variant.name.startswith(prefix) and attr_vals:
+                        display_name = " - ".join(attr_vals)
+                    else:
+                        display_name = variant.name
+                elif attr_vals:
                     display_name = " - ".join(attr_vals)
                 else:
-                    display_name = variant.name
-                    prefix = f"{product.name} - "
-                    if display_name.startswith(prefix):
-                        display_name = display_name[len(prefix):]
+                    display_name = variant.sku_suffix or f"Variant {variant.id}"
                     
                 for av in variant.attribute_values.all():
                     if av.attribute.name not in dynamic_options:
@@ -537,7 +539,6 @@ def _render_product_form(request, product, mode):
         "cancel_url": (
             request.POST.get("next")
             or request.GET.get("next")
-            or (request.META.get("HTTP_REFERER") if request.META.get("HTTP_REFERER") and "/dashboard/" in request.META.get("HTTP_REFERER") and "edit" not in request.META.get("HTTP_REFERER") else None)
             or reverse("dashboard:product-list")
         ),
     }

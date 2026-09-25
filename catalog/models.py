@@ -485,15 +485,18 @@ class ProductVariant(TimeStampedModel):
     
     @property
     def display_name(self):
-        """Returns just the variant-specific part of the name (e.g. 'Red - S')"""
+        """Returns just the variant-specific part of the name (e.g. 'Red - S' or custom name)"""
+        if self.name:
+            prefix = f"{self.product.name} - "
+            cleaned_name = self.name[len(prefix):] if self.name.startswith(prefix) else self.name
+            if cleaned_name and cleaned_name != self.sku_suffix:
+                return cleaned_name
+                
         attr_vals = [av.value for av in self.attribute_values.all()]
         if attr_vals:
             return " - ".join(attr_vals)
             
-        prefix = f"{self.product.name} - "
-        if self.name.startswith(prefix):
-            return self.name[len(prefix):]
-        return self.name
+        return self.name or self.sku_suffix or f"Variant {self.pk}"
     base_price = models.DecimalField(
         max_digits=12,
         decimal_places=2,

@@ -208,8 +208,15 @@
       max-width: 60%;
     }
   }
+
+  .form-control.is-valid, .form-select.is-valid,
+  .was-validated .form-control:valid, .was-validated .form-select:valid {
+    border-color: #e4e7ec !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
 </style>
-<form method="post" enctype="multipart/form-data" novalidate>
+<form method="post" enctype="multipart/form-data" novalidate id="product-form">
   {% csrf_token %}
   {% if request.GET.next %}
   <input type="hidden" name="next" value="{{ request.GET.next }}">
@@ -305,8 +312,8 @@
               <tbody id="variants_tbody">
                 {% for variant in existing_variants %}
                 <tr>
-                  <td class="position-relative">
-                    <strong>{{ variant.name }}</strong>
+                  <td class="position-relative" data-label="Variant Name">
+                    <input type="text" class="form-control form-control-sm w-100" name="variant_name[]" value="{{ variant.name }}" placeholder="Variant Name" required>
                     <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn d-md-none position-absolute end-0 top-50 translate-middle-y me-3"><i class="ti ti-trash"></i></button>
                     <!-- Pass original attribute strings to backend to preserve them on reload -->
                     <input type="hidden" name="variant_dynamic_attributes[]" value="{{ variant.post_attr_string }}">
@@ -690,8 +697,8 @@ document.addEventListener("DOMContentLoaded", function() {
       if (inventoryCard) inventoryCard.style.display = '';
       
       if (basePriceInput) basePriceInput.required = true;
-      if (mrpInput) mrpInput.required = true;
-      if (purchasePriceInput) purchasePriceInput.required = true;
+      if (mrpInput) mrpInput.required = false;
+      if (purchasePriceInput) purchasePriceInput.required = false;
       if (stockInput) stockInput.required = true;
       if (thresholdInput) thresholdInput.required = true;
     }
@@ -843,41 +850,88 @@ document.addEventListener("DOMContentLoaded", function() {
 
       const executeVariantsGeneration = () => {
         const tbody = document.getElementById('variants_tbody');
+        
+        //capture existing variant inputs before clearing table
+        const existingData = [];
+        tbody.querySelectorAll('tr').forEach(row => {
+          const attrInput = row.querySelector('input[name="variant_dynamic_attributes[]"]');
+          if (!attrInput) return;
+          const attrStr = attrInput.value.trim();
+          const nameInput = row.querySelector('input[name="variant_name[]"]');
+          const nameText = nameInput ? nameInput.value : (row.querySelector('strong') ? row.querySelector('strong').textContent.trim() : '');
+          const basePrice = row.querySelector('input[name="variant_base_price[]"]')?.value || '';
+          const mrp = row.querySelector('input[name="variant_mrp[]"]')?.value || '';
+          const purchasePrice = row.querySelector('input[name="variant_purchase_price[]"]')?.value || '';
+          const skuSuffix = row.querySelector('input[name="variant_sku_suffix[]"]')?.value || '';
+          const stock = row.querySelector('input[name="variant_stock_quantity[]"]')?.value || '0';
+          const threshold = row.querySelector('input[name="variant_low_stock_threshold[]"]')?.value || '5';
+          
+          existingData.push({
+            attrStr: attrStr,
+            attrs: attrStr.split('|').filter(Boolean),
+            name: nameText,
+            base_price: basePrice,
+            mrp: mrp,
+            purchase_price: purchasePrice,
+            sku_suffix: skuSuffix,
+            stock: stock,
+            threshold: threshold
+          });
+        });
+
         tbody.innerHTML = ''; // clear existing
   
         const baseSku = document.getElementById('id_sku') ? document.getElementById('id_sku').value.trim() : '';
-  
+
+        function findMatchingExisting(attrStrings, currentAttrs) {
+          let match = existingData.find(e => e.attrStr === attrStrings);
+          if (match) return match;
+          match = existingData.find(e => e.attrs.length > 0 && e.attrs.every(a => currentAttrs.includes(a)));
+          if (match) return match;
+          match = existingData.find(e => currentAttrs.length > 0 && currentAttrs.every(a => e.attrs.includes(a)));
+          return match || null;
+        }
+
         combinations.forEach(combo => {
           const nameParts = combo.map(c => c.valName);
-          const name = nameParts.join(' - ');
-          const attrStrings = combo.map(c => `${c.attrName}:${c.valName}`).join('|');
+          const defaultName = nameParts.join(' - ');
+          const currentAttrs = combo.map(c => `${c.attrName}:${c.valName}`);
+          const attrStrings = currentAttrs.join('|');
           const suffix = nameParts.join('-').replace(/\s+/g, '');
           const fullSku = baseSku ? `${baseSku}-${suffix}` : suffix;
+
+          const existingMatch = findMatchingExisting(attrStrings, currentAttrs);
+          const variantName = (existingMatch && existingMatch.name) ? existingMatch.name : defaultName;
+          const basePriceVal = existingMatch ? existingMatch.base_price : '';
+          const mrpVal = existingMatch ? existingMatch.mrp : '';
+          const purchasePriceVal = existingMatch ? existingMatch.purchase_price : '';
+          const stockVal = existingMatch ? existingMatch.stock : '0';
+          const thresholdVal = existingMatch ? existingMatch.threshold : '5';
           
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td class="position-relative">
-              <strong>${name}</strong>
+            <td class="position-relative" data-label="Variant Name">
+              <input type="text" class="form-control form-control-sm w-100" name="variant_name[]" value="${variantName}" placeholder="Variant Name" required>
               <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn d-md-none position-absolute end-0 top-50 translate-middle-y me-3"><i class="ti ti-trash"></i></button>
               <input type="hidden" name="variant_dynamic_attributes[]" value="${attrStrings}">
             </td>
             <td data-label="Base Price">
-              <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_base_price[]" value="" required>
+              <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_base_price[]" value="${basePriceVal}" required>
             </td>
             <td data-label="MRP">
-              <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_mrp[]" value="" required>
+              <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_mrp[]" value="${mrpVal}">
             </td>
             <td data-label="Purchase Price">
-              <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="" required>
+              <input type="number" step="0.01" min="0" class="form-control form-control-sm w-100" name="variant_purchase_price[]" value="${purchasePriceVal}">
             </td>
             <td data-label="Variant SKU">
               <input type="text" class="form-control form-control-sm w-100" name="variant_sku_suffix[]" value="${fullSku}" required readonly>
             </td>
             <td data-label="Stock">
-              <input type="number" min="0" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="0" required>
+              <input type="number" min="0" class="form-control form-control-sm w-100" name="variant_stock_quantity[]" value="${stockVal}" required>
             </td>
             <td data-label="Threshold">
-              <input type="number" min="0" class="form-control form-control-sm w-100" name="variant_low_stock_threshold[]" value="5" required>
+              <input type="number" min="0" class="form-control form-control-sm w-100" name="variant_low_stock_threshold[]" value="${thresholdVal}" required>
             </td>
             <td class="d-none d-md-table-cell text-center">
               <button type="button" class="btn btn-icon btn-sm btn-light text-danger remove-variant-btn mt-2 mt-md-0 w-100 w-md-auto"><i class="ti ti-trash"></i></button>
@@ -940,10 +994,69 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  document.addEventListener('click', function(e) {
-    if (e.target.closest('[data-formset-add]') || e.target.closest('[data-row-remove]') || e.target.closest('input[type="checkbox"][name$="-DELETE"]')) {
+  const productForm = document.getElementById('product-form');
+  if (productForm) {
+    const fieldErrorMessages = {
+      name: "Product name is required.",
+      sku: "SKU is required.",
+      category: "Category is required.",
+      base_price: "Base price is required.",
+      stock_quantity: "Stock quantity is required.",
+      low_stock_threshold: "Low stock threshold is required."
+    };
+
+    function clearFieldError(el) {
+      el.classList.remove('is-invalid');
+      const container = el.closest('.mb-3') || el.closest('td') || el.parentElement;
+      if (container) {
+        const err = container.querySelector('.js-field-error');
+        if (err) err.remove();
+      }
     }
-  });
+
+    productForm.addEventListener('submit', function(e) {
+      productForm.querySelectorAll('.is-invalid').forEach(el => clearFieldError(el));
+      
+      if (!productForm.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const invalidFields = productForm.querySelectorAll(':invalid');
+        invalidFields.forEach(el => {
+          el.classList.add('is-invalid');
+          const name = el.name ? el.name.replace('[]', '') : '';
+          const msg = fieldErrorMessages[name] || "This field is required.";
+          
+          const container = el.closest('.mb-3') || el.closest('td') || el.parentElement;
+          if (container && !container.querySelector('.js-field-error')) {
+            const errDiv = document.createElement('div');
+            errDiv.className = 'text-danger small mt-1 js-field-error';
+            errDiv.textContent = msg;
+            container.appendChild(errDiv);
+          }
+        });
+
+        const firstInvalid = invalidFields[0];
+        if (firstInvalid) {
+          firstInvalid.focus();
+          firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return false;
+      }
+    });
+
+    productForm.addEventListener('input', function(e) {
+      if (e.target && e.target.classList.contains('is-invalid') && e.target.checkValidity()) {
+        clearFieldError(e.target);
+      }
+    });
+
+    productForm.addEventListener('change', function(e) {
+      if (e.target && e.target.classList.contains('is-invalid') && e.target.checkValidity()) {
+        clearFieldError(e.target);
+      }
+    });
+  }
 });
 </script>
 {% endblock %}
