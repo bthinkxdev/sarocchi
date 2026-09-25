@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 import threading
 from django.core.mail import EmailMessage
 from django.conf import settings
-from django.http import HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import translation
 from django.utils.translation import gettext as _
@@ -208,6 +208,9 @@ def blog_detail_view(request: HttpRequest, slug: str) -> HttpResponse:
 @require_GET
 def page_view(request: HttpRequest, slug: str) -> HttpResponse:
     """Render a dynamic storefront CMS page."""
+    if not getattr(get_site_settings(), "enable_pages", True):
+        raise Http404("Page not found.")
+
     from cms.models import Page
     page = get_object_or_404(Page, slug=slug, is_published=True)
     

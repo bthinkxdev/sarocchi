@@ -23,8 +23,10 @@ def build_homepage_sections_snapshot() -> list[dict[str, Any]]:
 
     site_settings = get_site_settings()
     qs = HomepageSection.objects.filter(is_active=True)
-    if not site_settings.enable_brands:
+    if not getattr(site_settings, "enable_brands", True):
         qs = qs.exclude(section_type=HomepageSectionType.FEATURED_BRANDS)
+    if not getattr(site_settings, "enable_newsletter", True):
+        qs = qs.exclude(section_type=HomepageSectionType.NEWSLETTER)
 
     return [
         {

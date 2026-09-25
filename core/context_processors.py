@@ -47,8 +47,10 @@ def storefront(request: HttpRequest) -> dict[str, Any]:
     
     from cms.models import Page
 
+    site_settings = get_site_settings()
+
     return {
-        "site_settings": get_site_settings(),
+        "site_settings": site_settings,
         "category_tree": get_category_tree(),
         "cart_count": get_cart_count(request=request),
         "cart_product_ids": get_cart_product_ids(request=request),
@@ -61,5 +63,9 @@ def storefront(request: HttpRequest) -> dict[str, Any]:
         "session_currency": session_currency,
 
         "shell_only": request.META.get("HTTP_X_SHELL_RERENDER") == "true",
-        "cms_pages": Page.objects.filter(is_published=True),
+        "cms_pages": (
+            Page.objects.filter(is_published=True)
+            if getattr(site_settings, "enable_pages", True)
+            else Page.objects.none()
+        ),
     }

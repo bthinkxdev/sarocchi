@@ -98,12 +98,14 @@
         <i class="ti ti-bolt"></i><span class="nav-text">Flash Sales</span>
       </a>
     </li>
+    {% if site_settings.enable_newsletter %}
     <li>
       <a class="nav-link {% if nav_section == 'newsletter' %}active{% endif %}"
         href="{% url 'dashboard:newsletter-list' %}">
         <i class="ti ti-mail"></i><span class="nav-text">Newsletter</span>
       </a>
     </li>
+    {% endif %}
 
     <li class="px-4 pt-4 pb-2"><small class="nav-text text-secondary text-uppercase">Content</small></li>
     <li>
@@ -123,11 +125,13 @@
         <i class="ti ti-article"></i><span class="nav-text">Blog</span>
       </a>
     </li>
+    {% if site_settings.enable_pages %}
     <li>
       <a class="nav-link {% if nav_section == 'pages' %}active{% endif %}" href="{% url 'dashboard:page-list' %}">
         <i class="ti ti-file-text"></i><span class="nav-text">Pages</span>
       </a>
     </li>
+    {% endif %}
     <li>
       <a class="nav-link {% if nav_section == 'faqs' %}active{% endif %}" href="{% url 'dashboard:faq-list' %}">
         <i class="ti ti-help"></i><span class="nav-text">FAQs</span>

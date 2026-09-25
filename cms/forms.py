@@ -31,7 +31,7 @@ class HomepageSectionAdminForm(forms.ModelForm):
         from core.services import get_site_settings
 
         site_settings = get_site_settings()
-        if not site_settings.enable_brands:
+        if not getattr(site_settings, "enable_brands", True):
             if not (
                 self.instance
                 and self.instance.pk
@@ -41,6 +41,17 @@ class HomepageSectionAdminForm(forms.ModelForm):
                     choice
                     for choice in self.fields["section_type"].choices
                     if choice[0] != HomepageSectionType.FEATURED_BRANDS
+                ]
+        if not getattr(site_settings, "enable_newsletter", True):
+            if not (
+                self.instance
+                and self.instance.pk
+                and self.instance.section_type == HomepageSectionType.NEWSLETTER
+            ):
+                self.fields["section_type"].choices = [
+                    choice
+                    for choice in self.fields["section_type"].choices
+                    if choice[0] != HomepageSectionType.NEWSLETTER
                 ]
 
         initial_config = self.instance.config if self.instance.pk else {}
@@ -83,13 +94,22 @@ class HomepageSectionAdminForm(forms.ModelForm):
 
         if section_type == HomepageSectionType.FEATURED_BRANDS:
             site_settings = get_site_settings()
-            if not site_settings.enable_brands:
+            if not getattr(site_settings, "enable_brands", True):
                 if not (
                     self.instance
                     and self.instance.pk
                     and self.instance.section_type == HomepageSectionType.FEATURED_BRANDS
                 ):
                     self.add_error("section_type", "Brands are currently disabled in site settings.")
+        elif section_type == HomepageSectionType.NEWSLETTER:
+            site_settings = get_site_settings()
+            if not getattr(site_settings, "enable_newsletter", True):
+                if not (
+                    self.instance
+                    and self.instance.pk
+                    and self.instance.section_type == HomepageSectionType.NEWSLETTER
+                ):
+                    self.add_error("section_type", "Newsletter is currently disabled in site settings.")
 
         prefix = "config_"
         config_data = {}

@@ -87,6 +87,8 @@ def order_list(request: HttpRequest) -> HttpResponse:
         active_filters.append({"label": f'Search: "{query}"', "clear_url": _clear_url("q")})
 
     abandoned_count = Order.objects.filter(order_status=OrderStatus.CHECKOUT_PENDING).count()
+    from core.services import get_site_settings
+    site_settings = get_site_settings()
     PRD_ORDER_STATUSES = [
         OrderStatus.PLACED_COD,
         OrderStatus.CONFIRMED,
@@ -96,6 +98,9 @@ def order_list(request: HttpRequest) -> HttpResponse:
         OrderStatus.CANCELLED,
         OrderStatus.REFUNDED,
     ]
+    if not getattr(site_settings, "enable_cod", True):
+        PRD_ORDER_STATUSES.remove(OrderStatus.PLACED_COD)
+
     orderable_statuses = [
         (value, _STATUS_LABELS[value]) for value in PRD_ORDER_STATUSES if value in _STATUS_LABELS
     ]

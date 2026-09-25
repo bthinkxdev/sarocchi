@@ -17,9 +17,16 @@ def newsletter_subscribe_view(request: HttpRequest) -> HttpResponse:
     referer = request.META.get("HTTP_REFERER", "/")
     if "#" in referer:
         referer = referer.split("#")[0]
-    redirect_url = f"{referer}#newsletter"
-
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.accepts("application/json")
+
+    from core.services import get_site_settings
+    site_settings = get_site_settings()
+    if not getattr(site_settings, "enable_newsletter", True):
+        msg = "Newsletter subscription is currently unavailable."
+        if is_ajax:
+            return JsonResponse({"status": "error", "message": msg}, status=400)
+        messages.error(request, msg)
+        return redirect(redirect_url)
 
     form = NewsletterSignupForm(request.POST)
     if not form.is_valid():

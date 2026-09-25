@@ -225,6 +225,16 @@ class SiteSettings(TimeStampedModel):
         verbose_name="Enable Delhivery",
         help_text="Enable or disable Delhivery shipping integration across the site."
     )
+    enable_newsletter = models.BooleanField(
+        default=True,
+        verbose_name="Enable Newsletter",
+        help_text="Enable or disable Newsletter subscription features and display on home page and sidebar."
+    )
+    enable_pages = models.BooleanField(
+        default=True,
+        verbose_name="Enable Pages",
+        help_text="Enable or disable custom Pages feature and display in footer and sidebar."
+    )
     facebook_url = models.URLField(blank=True)
     instagram_url = models.URLField(blank=True)
     twitter_url = models.URLField(blank=True)
@@ -407,6 +417,7 @@ class SiteSettings(TimeStampedModel):
         self.pk = 1
         super().save(*args, **kwargs)
         cache.delete("site_settings_singleton")
+        cache.delete("cms:homepage_sections:active:v1")
 
     def delete(self, *args, **kwargs) -> tuple[int, dict[str, int]]:
         raise RuntimeError("SiteSettings singleton cannot be deleted.")

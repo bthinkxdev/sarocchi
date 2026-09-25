@@ -36,7 +36,9 @@
         <select name="status" class="form-select">
           <option value="">All order statuses</option>
           {% for value, label in statuses %}
+          {% if value != 'placed_cod' or site_settings.enable_cod %}
           <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>{{ label }}</option>
+          {% endif %}
           {% endfor %}
         </select>
       </div>

@@ -45,9 +45,11 @@
         <a href="{% url 'core:shipping-policy' %}">{% trans "Shipping Policy" %}</a>
         <a href="{% url 'core:terms-of-service' %}">{% trans "Terms and Conditions" %}</a>
         <a href="{% url 'core:contact-us' %}">{% trans "Support" %}</a>
+        {% if site_settings.enable_pages %}
         {% for p in cms_pages %}
           <a href="{% url 'core:page' p.slug %}">{{ p.title|title }}</a>
         {% endfor %}
+        {% endif %}
       </div>
 
       <div class="jm-footer__contact">
