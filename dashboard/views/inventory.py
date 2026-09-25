@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import F, Q
+from django.db.models import Case, F, IntegerField, Q, Value, When
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -23,12 +23,28 @@ def inventory_list(request: HttpRequest) -> HttpResponse:
 
     qs = (
         Product.objects.all()
-        .select_related("category")
+        .select_related("category", "homepage_featured")
         .prefetch_related(
             "variants__attribute_values__attribute",
             "images",
         )
-        .order_by("name")
+        .order_by(
+            Case(
+                When(homepage_featured__is_shown=True, then=Value(1)),
+                When(homepage_featured__is_shown=False, then=Value(-1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            ).desc(),
+            Case(
+                When(homepage_featured__is_shown=True, then=F("homepage_featured__updated_at")),
+                default=None,
+            ).desc(nulls_last=True),
+            Case(
+                When(homepage_featured__is_shown=False, then=F("homepage_featured__updated_at")),
+                default=None,
+            ).asc(nulls_last=True),
+            "-created_at",
+        )
     )
 
     if search_query:
@@ -75,6 +91,13 @@ def inventory_list(request: HttpRequest) -> HttpResponse:
         product.is_variant_product = bool(variants)
 
         if product.is_variant_product:
+            if status_filter == "in":
+                variants.sort(key=lambda v: (0 if v.stock_quantity > v.low_stock_threshold else 1, v.display_order, v.id))
+            elif status_filter == "low":
+                variants.sort(key=lambda v: (0 if 0 < v.stock_quantity <= v.low_stock_threshold else 1, v.display_order, v.id))
+            elif status_filter == "out":
+                variants.sort(key=lambda v: (0 if v.stock_quantity == 0 else 1, v.display_order, v.id))
+
             for v in variants:
                 if v.stock_quantity == 0:
                     v.status_label = "Out of stock"
@@ -88,8 +111,20 @@ def inventory_list(request: HttpRequest) -> HttpResponse:
 
             product.variant_list = variants
 
-            # Overall product status indicator
-            if any(v.stock_quantity == 0 for v in variants):
+            #overall product status indicator: when filtered, highlight the matching status first
+            if status_filter == "in" and any(v.stock_quantity > v.low_stock_threshold for v in variants):
+                product.status_label = f"{product.stock_quantity} in stock"
+                product.status_pill = "pill-green"
+            elif status_filter == "low" and any(0 < v.stock_quantity <= v.low_stock_threshold for v in variants):
+                product.status_label = "Low stock"
+                product.status_pill = "pill-amber"
+            elif status_filter == "out" and any(v.stock_quantity == 0 for v in variants):
+                if all(v.stock_quantity == 0 for v in variants):
+                    product.status_label = "Out of stock"
+                else:
+                    product.status_label = "Some out of stock"
+                product.status_pill = "pill-red"
+            elif any(v.stock_quantity == 0 for v in variants):
                 if all(v.stock_quantity == 0 for v in variants):
                     product.status_label = "Out of stock"
                     product.status_pill = "pill-red"

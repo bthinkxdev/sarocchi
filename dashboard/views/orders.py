@@ -87,8 +87,17 @@ def order_list(request: HttpRequest) -> HttpResponse:
         active_filters.append({"label": f'Search: "{query}"', "clear_url": _clear_url("q")})
 
     abandoned_count = Order.objects.filter(order_status=OrderStatus.CHECKOUT_PENDING).count()
+    PRD_ORDER_STATUSES = [
+        OrderStatus.PLACED_COD,
+        OrderStatus.CONFIRMED,
+        OrderStatus.PROCESSING,
+        OrderStatus.SHIPPED,
+        OrderStatus.DELIVERED,
+        OrderStatus.CANCELLED,
+        OrderStatus.REFUNDED,
+    ]
     orderable_statuses = [
-        (value, label) for value, label in OrderStatus.choices if value != OrderStatus.CHECKOUT_PENDING
+        (value, _STATUS_LABELS[value]) for value in PRD_ORDER_STATUSES if value in _STATUS_LABELS
     ]
 
     context = {
@@ -124,7 +133,22 @@ def order_detail(request: HttpRequest, pk: int) -> HttpResponse:
     #only the actually-valid next statuses — CONFIRMED is the sole trigger for AWB
     #creation, so an admin must never be able to pick an arbitrary status here.
     next_statuses = get_allowed_status_transitions().get(order.order_status, set())
-    allowed_choices = [(value, _STATUS_LABELS[value]) for value in next_statuses]
+    status_priority = {
+        OrderStatus.CONFIRMED: 1,
+        OrderStatus.PROCESSING: 2,
+        OrderStatus.READY_TO_SHIP: 2,
+        OrderStatus.SHIPPED: 3,
+        OrderStatus.PICKED_UP: 3,
+        OrderStatus.IN_TRANSIT: 4,
+        OrderStatus.OUT_FOR_DELIVERY: 5,
+        OrderStatus.DELIVERED: 6,
+        OrderStatus.REFUNDED: 8,
+        OrderStatus.CANCELLED: 9,
+    }
+    sorted_next_statuses = sorted(
+        next_statuses, key=lambda s: status_priority.get(s, 50)
+    )
+    allowed_choices = [(value, _STATUS_LABELS[value]) for value in sorted_next_statuses if value in _STATUS_LABELS]
     from payments.models import PaymentStatus
     payment_statuses = PaymentStatus.choices
 

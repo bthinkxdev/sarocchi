@@ -281,7 +281,7 @@
             <input type="number" min="0" name="stock_quantity" id="input-product-{{ product.pk }}"
                    value="{{ product.stock_quantity }}" class="form-control form-control-sm"
                    style="width: 80px; text-align: center;">
-            <button type="submit" class="btn btn-sm btn-outline-primary" id="btn-product-{{ product.pk }}">
+            <button type="submit" class="btn btn-sm btn-outline-primary" id="btn-product-{{ product.pk }}" disabled>
               Save
             </button>
           </form>
@@ -321,7 +321,7 @@
             <input type="number" min="0" name="stock_quantity" id="input-variant-{{ v.pk }}"
                    value="{{ v.stock_quantity }}" class="form-control form-control-sm"
                    style="width: 80px; height: 30px; text-align: center;">
-            <button type="submit" class="btn btn-sm btn-outline-primary" style="height: 30px; padding: 0 10px;" id="btn-variant-{{ v.pk }}">
+            <button type="submit" class="btn btn-sm btn-outline-primary" style="height: 30px; padding: 0 10px;" id="btn-variant-{{ v.pk }}" disabled>
               Save
             </button>
           </form>
@@ -395,6 +395,9 @@ function handleInlineAdjust(event, itemType, itemId, parentProductId) {
 
   if (!form || !btn) return false;
 
+  const input = form.querySelector('[name=stock_quantity]');
+  if (!input || input.value === input.defaultValue) return false;
+
   delete form.dataset.loaderActive;
   form.removeAttribute('data-loader-active');
 
@@ -421,13 +424,13 @@ function handleInlineAdjust(event, itemType, itemId, parentProductId) {
     return res.json();
   })
   .then(data => {
-    btn.disabled = false;
     delete form.dataset.loaderActive;
     form.removeAttribute('data-loader-active');
 
     if (data.success) {
+      input.defaultValue = data.new_stock;
       btn.textContent = 'Saved!';
-      setTimeout(() => { btn.textContent = origText; }, 1500);
+      setTimeout(() => { btn.textContent = origText; btn.disabled = true; }, 1500);
 
       const pill = document.getElementById(itemType === 'variant' ? `pill-variant-${itemId}` : `product-pill-${itemId}`);
       if (pill) {
@@ -470,6 +473,13 @@ function handleInlineAdjust(event, itemType, itemId, parentProductId) {
 
   return false;
 }
+
+document.addEventListener('input', function(e) {
+  if (e.target && e.target.name === 'stock_quantity') {
+    const btn = e.target.form ? e.target.form.querySelector('button[type="submit"]') : null;
+    if (btn) btn.disabled = (e.target.value === e.target.defaultValue || e.target.value === '');
+  }
+});
 
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.variant-toggle-btn').forEach(function(btn) {

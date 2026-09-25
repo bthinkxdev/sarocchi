@@ -153,21 +153,23 @@ def get_admin_dashboard_summary() -> dict[str, Any]:
     yesterday = today - timedelta(days=1)
 
     yesterday_report = DailySalesReport.objects.filter(report_date=yesterday).first()
+    out_of_stock_qs = (
+        Product.objects.filter(is_active=True)
+        .filter(
+            Q(variants__stock_quantity=0)
+            | Q(variants__isnull=True, stock_quantity=0)
+        )
+        .distinct()
+    )
+    out_of_stock = out_of_stock_qs.count()
+
     strictly_low_stock = (
         Product.objects.filter(is_active=True)
         .filter(
             Q(variants__stock_quantity__lte=F("variants__low_stock_threshold"), variants__stock_quantity__gt=0)
             | Q(variants__isnull=True, stock_quantity__lte=F("low_stock_threshold"), stock_quantity__gt=0)
         )
-        .distinct()
-        .count()
-    )
-    out_of_stock = (
-        Product.objects.filter(is_active=True)
-        .filter(
-            Q(variants__stock_quantity=0)
-            | Q(variants__isnull=True, stock_quantity=0)
-        )
+        .exclude(id__in=out_of_stock_qs.values_list("id", flat=True))
         .distinct()
         .count()
     )

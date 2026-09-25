@@ -1998,6 +1998,12 @@ body.mobile-search-open {
   background: var(--floward-bg);
 }
 
+.qty-stepper__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .qty-stepper__value {
   min-width: 28px;
   text-align: center;
