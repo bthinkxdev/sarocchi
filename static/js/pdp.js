@@ -35,7 +35,7 @@
            });
         }
 
-        if (!firstVisible) {
+        if (thumbs.length > 0 && !firstVisible) {
           var main = document.getElementById('main-pdp-image');
           var mainVideo = document.getElementById('main-pdp-video');
           if (mainVideo) {
@@ -61,7 +61,7 @@
           if (stickyImg && thumbImg) {
             stickyImg.src = thumbImg.src;
           }
-        } else {
+        } else if (thumbs.length > 0) {
           if (stickyImg) {
             stickyImg.src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'%3E%3Crect width='100%25' height='100%25' fill='%23f1f5f9'/%3E%3C/svg%3E";
           }
