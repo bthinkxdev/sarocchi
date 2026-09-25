@@ -1,4 +1,4 @@
-"""Root URL configuration for yarn_guy."""
+"""Root URL configuration for sarocchi."""
 
 from django.conf import settings
 from django.conf.urls.static import static

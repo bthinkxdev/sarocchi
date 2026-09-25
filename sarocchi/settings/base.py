@@ -1,5 +1,5 @@
 """
-Base Django settings shared across all environments for yarn_guy.
+Base Django settings shared across all environments for sarocchi.
 """
 
 from pathlib import Path
@@ -60,7 +60,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "yarn_guy.urls"
+ROOT_URLCONF = "sarocchi.urls"
 
 TEMPLATES = [
     {
@@ -82,8 +82,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "yarn_guy.wsgi.application"
-ASGI_APPLICATION = "yarn_guy.asgi.application"
+WSGI_APPLICATION = "sarocchi.wsgi.application"
+ASGI_APPLICATION = "sarocchi.asgi.application"
 
 _database_url = env(
     "DATABASE_URL",
