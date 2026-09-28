@@ -305,14 +305,40 @@ def _empty(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _featured_collections(config: dict[str, Any]) -> dict[str, Any]:
-    from catalog.models import Collection
-    
+    from django.db.models import Avg, Count, Prefetch, Q
+    from catalog.models import Collection, ModerationStatus, Product
+    from catalog.selectors import (
+        _decorate_homepage_rail_prices,
+        _primary_image_prefetch,
+        _variants_prefetch,
+    )
+
     slugs = config.get("collection_slugs", [])
+    approved = Q(reviews__moderation_status=ModerationStatus.APPROVED)
+    product_qs = (
+        Product.objects.filter(is_active=True)
+        .select_related("category", "brand")
+        .prefetch_related(_primary_image_prefetch(), _variants_prefetch(), "labels")
+        .annotate(
+            average_rating=Avg("reviews__rating", filter=approved),
+            review_count=Count("reviews", filter=approved),
+        )
+    )
+
+    base_qs = Collection.objects.filter(is_active=True).prefetch_related(
+        Prefetch("products", queryset=product_qs)
+    )
     if slugs:
         if isinstance(slugs, str):
             slugs = [s.strip() for s in slugs.split(",") if s.strip()]
-        collections = Collection.objects.filter(slug__in=slugs, is_active=True).prefetch_related("products")
+        collections = list(base_qs.filter(slug__in=slugs))
     else:
-        collections = Collection.objects.filter(is_active=True).prefetch_related("products")
-        
+        collections = list(base_qs)
+
+    all_products = []
+    for col in collections:
+        all_products.extend(col.products.all())
+    if all_products:
+        _decorate_homepage_rail_prices({"collections": all_products})
+
     return {"collections": collections}

@@ -6,7 +6,7 @@
   data-product-price="{% money_label eff_price display_currency %}"
   data-product-stock="{% if eff_stock <= 0 %}{% trans 'Out of Stock' %}{% elif eff_stock <= eff_thresh %}{% blocktrans with count=eff_stock %}Only {{ count }} left{% endblocktrans %}{% else %}{% trans 'In Stock' %}{% endif %}"
   data-product-badge="{% if product.is_featured %}{% trans 'Featured' %}{% elif product.is_bestseller %}{% trans 'Bestseller' %}{% elif product.is_new_arrival %}{% trans 'New' %}{% endif %}"
-  {% with img=product.primary_images.0 %}
+  {% with img=product.primary_images.0|default:product.images.first %}
   data-product-image="{% if img and img.image %}{{ img.image.url }}{% else %}{% static 'img/product-placeholder.svg' %}{% endif %}"
   {% endwith %} 
   data-variant-id="{{ display_variant.pk|default:'' }}" 
@@ -16,7 +16,7 @@
   data-product-variants="{{ product.quick_view_variants_json }}">
   {# Media: only the image sits inside .ratio so Bootstrap does not stretch badge/actions into a full-bleed blocker. #}
   <div class="jm-product-card__media">
-    {% with img_main=product.primary_images.0 img_hover=product.primary_images.1 %}
+    {% with img_main=product.primary_images.0|default:product.images.first img_hover=product.primary_images.1 %}
     <a href="{% url 'catalog:pdp' slug=product.slug %}" class="jm-product-card__img-link ratio ratio-1x1 {% if img_hover and img_hover.image %}has-hover-img{% endif %}" tabindex="-1" 
     aria-hidden="true">
       {% if img_main and img_main.image %}

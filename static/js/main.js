@@ -108,6 +108,9 @@
   window.addEventListener('load', function () {
     window.setTimeout(hidePageLoader, 320);
   });
+  window.addEventListener('pageshow', function () {
+    hidePageLoader();
+  });
   // Fallback if load already fired or assets cached
   if (document.readyState === 'complete') {
     window.setTimeout(hidePageLoader, 320);
@@ -1604,12 +1607,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('pageshow', function (e) {
     syncCartStatus();
-    var isBackForward = e.persisted ||
-      (window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType('navigation').length > 0 && window.performance.getEntriesByType('navigation')[0].type === 'back_forward') ||
-      (window.performance && window.performance.navigation && window.performance.navigation.type === 2);
-    if (isBackForward) {
-      window.location.reload();
-    }
   });
   window.addEventListener('focus', syncCartStatus);
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') syncCartStatus(); });

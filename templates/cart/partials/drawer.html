@@ -80,7 +80,7 @@
 <div class="cart-drawer-footer">
   <div class="cart-summary-row"><span>{% trans "Subtotal" %}</span><span>{{ display_currency.symbol }} {{ summary.subtotal }}</span></div>
   {% if summary.coupon_discount %}<div class="cart-summary-row text-success"><span>{% trans "Coupon" %}</span><span>-{{ display_currency.symbol }} {{ summary.coupon_discount }}</span></div>{% endif %}
-  <div class="cart-summary-row"><span>{% trans "Delivery" %}</span><span>{{ display_currency.symbol }} {{ summary.delivery_charge }}</span></div>
+  <div class="cart-summary-row"><span>{% trans "Delivery" %}</span><span>{% if summary.delivery_charge and summary.delivery_charge > 0 %}{{ display_currency.symbol }} {{ summary.delivery_charge }}{% else %}{% trans "Calculated at checkout" %}{% endif %}</span></div>
   <div class="cart-summary-row cart-summary-total"><span>{% trans "Total" %}</span><span class="text-floward">{{ display_currency.symbol }} {{ summary.grand_total }}</span></div>
   <a href="{% url 'cart:page' %}" class="btn btn-outline-floward w-100 py-2 mt-2">{% trans "View Cart" %}</a>
   {% if summary.has_stock_issues %}

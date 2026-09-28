@@ -411,6 +411,16 @@ class Product(TimeStampedModel):
             })
         return json.dumps(data)
 
+    @property
+    def primary_images(self):
+        if hasattr(self, "_prefetched_primary_images"):
+            return self._prefetched_primary_images
+        return list(self.images.order_by("-is_primary", "display_order"))
+
+    @primary_images.setter
+    def primary_images(self, value):
+        self._prefetched_primary_images = value
+
 
 class ProductAttribute(TimeStampedModel):
     """Global product attribute definition (e.g., Color, Size)."""
