@@ -24,7 +24,11 @@ class HomepageSectionAdminForm(forms.ModelForm):
         section_type = (
             self.data.get("section_type")
             if self.data
-            else (self.instance.section_type if self.instance.pk else "")
+            else (
+                self.initial.get("section_type")
+                if (self.initial and self.initial.get("section_type"))
+                else (self.instance.section_type if (self.instance and self.instance.pk) else "")
+            )
         )
 
         from cms.models import HomepageSectionType

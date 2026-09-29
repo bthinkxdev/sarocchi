@@ -33,6 +33,17 @@ class HomepageSectionCreateView(DashboardCreateView):
     url_basename = "homepagesection"
     singular_name = "Section"
 
+    def get_initial(self):
+        initial = super().get_initial()
+        if section_type := self.request.GET.get("section_type"):
+            initial["section_type"] = section_type
+        for field in ("title", "display_order"):
+            if val := self.request.GET.get(field):
+                initial[field] = val
+        if "is_active" in self.request.GET:
+            initial["is_active"] = self.request.GET.get("is_active") in ("1", "true", "True", "on")
+        return initial
+
 
 class HomepageSectionUpdateView(DashboardUpdateView):
     model = HomepageSection
@@ -40,6 +51,17 @@ class HomepageSectionUpdateView(DashboardUpdateView):
     nav_section = "homepage"
     url_basename = "homepagesection"
     singular_name = "Section"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if section_type := self.request.GET.get("section_type"):
+            initial["section_type"] = section_type
+        for field in ("title", "display_order"):
+            if val := self.request.GET.get(field):
+                initial[field] = val
+        if "is_active" in self.request.GET:
+            initial["is_active"] = self.request.GET.get("is_active") in ("1", "true", "True", "on")
+        return initial
 
 
 class HomepageSectionDeleteView(DashboardDeleteView):

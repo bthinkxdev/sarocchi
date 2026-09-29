@@ -63,40 +63,71 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const destSelect = document.getElementById('id_config_destination') || document.querySelector('[name="config_destination"]');
-  const targetSelect = document.getElementById('id_config_target') || document.querySelector('[name="config_target"]');
-  if (!destSelect || !targetSelect) return;
-
-  //store all original options
-  const allOptions = Array.from(targetSelect.options).map(opt => ({
-    value: opt.value,
-    text: opt.text,
-    selected: opt.selected
-  }));
-
-  function updateTargetOptions() {
-    const currentDest = destSelect.value;
-    const currentVal = targetSelect.value;
-    targetSelect.innerHTML = '';
-
-    const matchingOptions = allOptions.filter(opt => opt.value.startsWith(currentDest + ':'));
-    matchingOptions.forEach(opt => {
-      const optionEl = document.createElement('option');
-      optionEl.value = opt.value;
-      optionEl.textContent = opt.text;
-      if (opt.value === currentVal) {
-        optionEl.selected = true;
+  //dynamic section_type reload for HomepageSection forms
+  const sectionTypeSelect = document.getElementById('id_section_type') || document.querySelector('select[name="section_type"]');
+  if (sectionTypeSelect) {
+    function handleSectionChange() {
+      const url = new URL(window.location.href);
+      if (sectionTypeSelect.value) {
+        url.searchParams.set('section_type', sectionTypeSelect.value);
+      } else {
+        url.searchParams.delete('section_type');
       }
-      targetSelect.appendChild(optionEl);
-    });
+      const form = sectionTypeSelect.form;
+      if (form) {
+        const titleInput = form.querySelector('[name="title"]');
+        if (titleInput && titleInput.value) url.searchParams.set('title', titleInput.value);
+        const orderInput = form.querySelector('[name="display_order"]');
+        if (orderInput && orderInput.value) url.searchParams.set('display_order', orderInput.value);
+        const activeInput = form.querySelector('[name="is_active"]');
+        if (activeInput) url.searchParams.set('is_active', activeInput.checked ? '1' : '0');
+      }
+      window.location.href = url.toString();
+    }
 
-    if (!targetSelect.value && matchingOptions.length > 0) {
-      targetSelect.selectedIndex = 0;
+    sectionTypeSelect.addEventListener('change', handleSectionChange);
+
+    const hasConfigFields = document.querySelector('[name^="config_"]');
+    const url = new URL(window.location.href);
+    if (sectionTypeSelect.value && !url.searchParams.get('section_type') && !hasConfigFields) {
+      handleSectionChange();
     }
   }
 
-  destSelect.addEventListener('change', updateTargetOptions);
-  updateTargetOptions();
+  const destSelect = document.getElementById('id_config_destination') || document.querySelector('[name="config_destination"]');
+  const targetSelect = document.getElementById('id_config_target') || document.querySelector('[name="config_target"]');
+  if (destSelect && targetSelect) {
+    //store all original options
+    const allOptions = Array.from(targetSelect.options).map(opt => ({
+      value: opt.value,
+      text: opt.text,
+      selected: opt.selected
+    }));
+
+    function updateTargetOptions() {
+      const currentDest = destSelect.value;
+      const currentVal = targetSelect.value;
+      targetSelect.innerHTML = '';
+
+      const matchingOptions = allOptions.filter(opt => opt.value.startsWith(currentDest + ':'));
+      matchingOptions.forEach(opt => {
+        const optionEl = document.createElement('option');
+        optionEl.value = opt.value;
+        optionEl.textContent = opt.text;
+        if (opt.value === currentVal) {
+          optionEl.selected = true;
+        }
+        targetSelect.appendChild(optionEl);
+      });
+
+      if (!targetSelect.value && matchingOptions.length > 0) {
+        targetSelect.selectedIndex = 0;
+      }
+    }
+
+    destSelect.addEventListener('change', updateTargetOptions);
+    updateTargetOptions();
+  }
 
   //instant preview for uploaded file inputs
   document.querySelectorAll('input[type="file"]').forEach(input => {
