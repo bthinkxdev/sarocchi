@@ -124,6 +124,7 @@
       
       sessionStorage.setItem('purchase_fired_' + orderNumber, 'true');
     }
+    try { sessionStorage.removeItem('checkout_draft'); } catch(e) {}
   });
 </script>
 {% endblock %}

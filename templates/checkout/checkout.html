@@ -21,7 +21,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container page-container checkout-page jm-page" hx-get="{% url 'checkout:checkout' %}" hx-trigger="cartUpdated from:body" hx-select=".checkout-page" hx-swap="outerHTML">
+<div class="container page-container checkout-page jm-page">
   {% if not summary.lines %}
   <div class="text-center py-5 mt-5">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5" class="mb-3 mx-auto"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
@@ -203,7 +203,7 @@
     </div>
 
     <div class="col-lg-5">
-      <div class="checkout-step sticky-top" style="top: 100px;" id="order-summary-container" hx-get="{% url 'checkout:checkout' %}" hx-trigger="stockChanged from:body" hx-select="#order-summary-container" hx-swap="outerHTML">
+      <div class="checkout-step sticky-top" style="top: 100px;" id="order-summary-container" hx-get="{% url 'checkout:checkout' %}" hx-trigger="stockChanged from:body, cartUpdated from:body" hx-select="#order-summary-container" hx-swap="outerHTML">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h2 class="mb-0">{% trans "Order Summary" %}</h2>
           {% if is_buy_now and summary.lines %}
@@ -383,6 +383,24 @@
 
     var checkoutForm = document.getElementById('checkout-form');
     if (checkoutForm) {
+      try {
+        Object.entries(JSON.parse(sessionStorage.getItem('checkout_draft') || '{}')).forEach(function(pair) {
+          if (checkoutForm[pair[0]] && pair[1]) checkoutForm[pair[0]].value = pair[1];
+        });
+        if (citySelect && citySelect.value === '__other__' && manualCityWrapper) manualCityWrapper.style.display = 'block';
+        if (newAddressFields && (document.getElementById('addr-new')?.checked || !checkoutForm['address_id']?.value)) newAddressFields.style.display = 'block';
+      } catch(e) {}
+
+      var saveDraft = function() {
+        try { sessionStorage.setItem('checkout_draft', JSON.stringify(Object.fromEntries(new FormData(checkoutForm)))); } catch(e) {}
+      };
+      checkoutForm.addEventListener('input', saveDraft);
+      checkoutForm.addEventListener('change', saveDraft);
+
+      document.body.addEventListener('cartUpdated', function() {
+        fetch("{% url 'cart:status' %}").then(function(r) { return r.json(); }).then(function(d) { if (!d || d.cart_count === 0) location.reload(); }).catch(function() {});
+      });
+
       function validateCheckoutForm() {
         var isValid = true;
         var guestNameEl = checkoutForm.querySelector('input[name="guest_name"]');
