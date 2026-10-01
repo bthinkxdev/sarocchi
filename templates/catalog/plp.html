@@ -57,6 +57,13 @@
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     var query = '{{ filters.q|escapejs }}';
+    try {
+      var currentUrl = new URL(window.location.href);
+      if (currentUrl.searchParams.has('q') && currentUrl.searchParams.get('q') !== query) {
+        currentUrl.searchParams.set('q', query);
+        window.history.replaceState({}, '', currentUrl.toString());
+      }
+    } catch (e) {}
     
     //google analytics 4
     if (typeof gtag === 'function') {

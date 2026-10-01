@@ -181,6 +181,7 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
             "attributes": filter_options.get("attributes", []),
             "active_category": active_cat,
             "active_collection": active_collection,
+            "search_query": filters.get("q", ""),
         }
     )
 

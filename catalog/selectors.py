@@ -206,6 +206,47 @@ def _decorate_homepage_rail_prices(rails: dict[str, list[Product]]) -> None:
         product.original_price = eff_base
 
 
+def _smart_search_filter(query_str: str) -> tuple[Q, str]:
+    """Return an intelligent search Q filter and cleaned display query."""
+    import re
+    cleaned = re.sub(r'[^a-zA-Z0-9\s-]', ' ', query_str).strip()
+    cleaned = re.sub(r'([0-9]+)([a-zA-Z]{2,})', r'\1 \2', cleaned)
+    cleaned = re.sub(r'([a-zA-Z]{2,})([0-9]+)', r'\1 \2', cleaned)
+    words = cleaned.split()
+    if not words:
+        return Q(pk__in=[]), ""
+
+    def _word_q(w: str) -> Q:
+        return (
+            Q(name__icontains=w) |
+            Q(sku__icontains=w) |
+            Q(variants__sku_suffix__icontains=w) |
+            Q(category__name__icontains=w) |
+            Q(brand__name__icontains=w) |
+            Q(tags__name__icontains=w) |
+            Q(meta_description__icontains=w)
+        )
+
+    base_qs = Product.objects.filter(is_active=True)
+    valid_words = [w for w in words if base_qs.filter(_word_q(w)).exists()]
+
+    if valid_words:
+        clean_q = Q()
+        for w in valid_words:
+            clean_q &= _word_q(w)
+        if base_qs.filter(clean_q).exists():
+            return clean_q, " ".join(valid_words)
+        or_q = Q()
+        for w in valid_words:
+            or_q |= _word_q(w)
+        return or_q, " ".join(valid_words)
+
+    full_q = Q()
+    for w in words:
+        full_q &= _word_q(w)
+    return full_q, " ".join(words)
+
+
 def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> QuerySet[Product]:
     """Apply PLP filter dict to a base queryset."""
     if category_id := filters.get("category_id"):
@@ -237,22 +278,9 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
     if max_price := filters.get("max_price"):
         queryset = queryset.filter(base_price__lte=max_price)
     if q := filters.get("q"):
-        import re
-        clean_q = q.strip()
-        smart_q = re.sub(r'[^a-zA-Z0-9\s]', ' ', clean_q).strip()
-        search_term = smart_q if smart_q else clean_q
-        
-        words = search_term.split()
-        if words:
-            query_obj = Q()
-            for word in words:
-                query_obj &= (
-                    Q(name__icontains=word) |
-                    Q(category__name__icontains=word) |
-                    Q(meta_description__icontains=word) |
-                    Q(tags__name__icontains=word)
-                )
-            queryset = queryset.filter(query_obj).distinct()
+        search_q, clean_text = _smart_search_filter(q)
+        queryset = queryset.filter(search_q).distinct()
+        filters["q"] = clean_text
         
     if collection := filters.get("collection"):
         if collection == "all":
@@ -291,7 +319,7 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
     return queryset
 
 
-def _apply_plp_sort(queryset: QuerySet[Product], sort: str) -> QuerySet[Product]:
+def _apply_plp_sort(queryset: QuerySet[Product], sort: str, is_search: bool = False) -> QuerySet[Product]:
     """Apply PLP sort key to queryset."""
     sort_map = {
         "price_asc": "base_price",
@@ -302,6 +330,10 @@ def _apply_plp_sort(queryset: QuerySet[Product], sort: str) -> QuerySet[Product]
     }
     primary_sort = sort_map.get(sort, "-created_at")
     
+    #on active search queries without an explicit sort, do not let homepage pinned items distort results
+    if is_search and (sort in ("newest", "") or sort not in sort_map):
+        return queryset.order_by("-created_at")
+
     #only apply pinned logic if the sort is default/newest
     if sort in ("newest", "") or sort not in sort_map:
         return queryset.order_by(
@@ -355,7 +387,7 @@ def get_plp_products(
         )
     )
     queryset = _apply_plp_filters(queryset, filters)
-    queryset = _apply_plp_sort(queryset, sort)
+    queryset = _apply_plp_sort(queryset, sort, is_search=bool(filters.get("q")))
 
     paginator = Paginator(queryset, page_size)
     page_obj = paginator.get_page(page)
@@ -581,9 +613,7 @@ def invalidate_category_tree_cache() -> None:
 
 
 def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
-    """
-    Return product, brand, category, and equipment type matches for HTMX live search.
-    """
+    """Return product, brand, and category matches for live search."""
     if not query or len(query.strip()) < 2:
         return {
             "products": [],
@@ -592,28 +622,20 @@ def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
             "equipment_types": [],
         }
 
-    from catalog.models import Brand, Category
-    import re
+    from catalog.models import Category
 
-    clean_query = query.strip()
-    smart_query = re.sub(r'[^a-zA-Z0-9\s]', ' ', clean_query).strip()
-    search_term = smart_query if smart_query else clean_query
+    search_q, clean_text = _smart_search_filter(query)
 
-    words = search_term.split()
-    query_obj = Q(is_active=True)
-    if words:
-        for word in words:
-            query_obj &= (Q(name__icontains=word) | Q(tags__name__icontains=word))
-            
     products = list(
-        Product.objects.filter(query_obj)
+        Product.objects.filter(is_active=True)
+        .filter(search_q)
         .distinct()
         .select_related("category")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)[:limit]
     )
 
-    categories = list(Category.objects.filter(is_active=True, name__icontains=search_term)[:5])
+    categories = list(Category.objects.filter(is_active=True, name__icontains=clean_text)[:5])
 
     return {
         "products": products,

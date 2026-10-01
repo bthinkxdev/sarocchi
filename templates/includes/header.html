@@ -68,7 +68,7 @@
 
         <div class="jm-search__field">
           <input type="search" id="site-search-input" name="q" class="jm-search__input"
-            value="{{ request.GET.q|default:'' }}"
+            value="{{ search_query|default:'' }}"
             placeholder="{% trans 'Search sarees, jewellery, collections...' %}"
             hx-get="{% url 'catalog:search-suggest' %}" hx-trigger="keyup changed delay:300ms, search"
             hx-target="#search-suggestions" hx-indicator="#search-suggestions-indicator" hx-swap="innerHTML"
@@ -241,13 +241,13 @@
           <path d="M21 21l-3.6-3.6" />
         </svg>
         <input type="search" id="mobile-search-input" name="q" class="mobile-search__input"
-          value="{{ request.GET.q|default:'' }}"
+          value="{{ search_query|default:'' }}"
           placeholder="{% trans 'Search sarees, jewellery, collections...' %}" hx-get="{% url 'catalog:search-suggest' %}"
           hx-trigger="keyup changed delay:250ms, search" hx-target="#mobile-search-results" hx-swap="innerHTML"
           autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="{% trans 'Search' %}"
           aria-controls="mobile-search-results">
         <button type="button" class="mobile-search__clear" id="mobile-search-clear" aria-label="{% trans 'Clear' %}"
-          {% if not request.GET.q %}hidden{% endif %}>
+          {% if not search_query %}hidden{% endif %}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
             aria-hidden="true">
             <path d="M18 6L6 18M6 6l12 12" />
