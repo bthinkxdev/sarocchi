@@ -827,7 +827,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (stockEl) {
-          if (outOfStock) {
+          var isOutOfStock = data.is_in_stock === false || (data.stock_quantity !== undefined && data.stock_quantity <= 0);
+          if (isOutOfStock) {
             stockEl.textContent = 'Out of Stock';
             stockEl.className = 'jm-qv__stock is-out';
           } else if (data.stock_quantity !== undefined && data.low_stock_threshold !== undefined && data.stock_quantity <= data.low_stock_threshold) {
@@ -845,8 +846,25 @@ document.addEventListener('DOMContentLoaded', () => {
           window.jmCartItemKeys.delete(itemKey);
         }
 
-        applyQvButtons(data.is_in_cart, outOfStock);
+        applyQvButtons(data.is_in_cart, isOutOfStock);
       }).catch(function () { });
+  }
+
+  function updateUrlVariant(rawUrl, vid) {
+    if (!rawUrl || rawUrl === '#') return '#';
+    try {
+      var url = new URL(rawUrl, window.location.origin);
+      if (vid) {
+        url.searchParams.set('variant_id', vid);
+      } else {
+        url.searchParams.delete('variant_id');
+      }
+      return url.origin === window.location.origin ? (url.pathname + url.search + url.hash) : url.toString();
+    } catch (e) {
+      if (!vid) return rawUrl;
+      var sep = rawUrl.indexOf('?') !== -1 ? '&' : '?';
+      return rawUrl + sep + 'variant_id=' + encodeURIComponent(vid);
+    }
   }
 
   function openQuickView(card) {
@@ -904,7 +922,9 @@ document.addEventListener('DOMContentLoaded', () => {
         badge.hidden = true;
       }
     }
-    if (pdp) pdp.href = card.dataset.productUrl || '#';
+    var baseUrl = card.dataset.productUrl || '#';
+    var defaultImg = card.dataset.productImage || '';
+    if (pdp) pdp.href = baseUrl;
     if (productId) productId.value = card.dataset.productId || '';
 
     if (modalEl.dataset.cartItemKeys !== undefined && !window.jmCartItemKeys) {
@@ -928,6 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
         variantsWrap.classList.add('d-none');
         variantsGroup.innerHTML = '';
         if (variantId) variantId.value = selectedVid;
+        if (pdp) pdp.href = updateUrlVariant(baseUrl, selectedVid);
         updateQvState(productId ? productId.value : '', selectedVid, card);
       } else {
         variantsWrap.classList.remove('d-none');
@@ -954,6 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
           radio.dataset.discount = v.discount || '0';
           radio.dataset.stock = String(v.stock !== undefined ? v.stock : 0);
           radio.dataset.thresh = String(v.thresh !== undefined ? v.thresh : 5);
+          if (v.image) radio.dataset.image = v.image;
           if (vidStr === selectedVid) {
             radio.checked = true;
           }
@@ -975,6 +997,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
           radio.addEventListener('change', function () {
             if (variantId) variantId.value = this.value;
+            if (pdp) pdp.href = updateUrlVariant(baseUrl, this.value);
+            if (img && this.dataset.image) {
+              img.src = this.dataset.image;
+            } else if (img && defaultImg) {
+              img.src = defaultImg;
+            }
             
             var qvQtyInput = document.getElementById('jm-qv-qty');
             var qvFormQty = document.getElementById('jm-qv-form-qty');
@@ -1011,6 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
         var checked = variantsGroup.querySelector('.qv-variant-radio:checked');
         var initVid = checked ? checked.value : selectedVid;
         if (variantId) variantId.value = initVid;
+        if (pdp) pdp.href = updateUrlVariant(baseUrl, initVid);
         if (checked) {
           checked.dispatchEvent(new Event('change'));
         }
@@ -1018,7 +1047,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else {
       if (variantId) variantId.value = selectedVid;
+      if (pdp) pdp.href = updateUrlVariant(baseUrl, selectedVid);
       updateQvState(productId ? productId.value : '', selectedVid, card);
+    }
+
+    if (pdp) {
+      pdp.onclick = function () {
+        var currentVid = variantId ? variantId.value : '';
+        pdp.href = updateUrlVariant(baseUrl, currentVid);
+      };
     }
 
     bootstrap.Modal.getOrCreateInstance(modalEl).show();

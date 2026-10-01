@@ -393,6 +393,19 @@ class Product(TimeStampedModel):
         variants = self.variant_list if hasattr(self, "variant_list") else list(self.variants.all())
         if not variants:
             return ""
+
+        variant_image_map = {}
+        images = getattr(self, "primary_images", None)
+        if images is None and hasattr(self, "images"):
+            images = list(self.images.all())
+        if images:
+            for img in images:
+                if getattr(img, "variant_id", None) and img.variant_id not in variant_image_map and getattr(img, "image", None):
+                    try:
+                        variant_image_map[img.variant_id] = img.image.url
+                    except Exception:
+                        pass
+
         data = []
         for v in variants:
             eff_price = v.base_price if (v.base_price is not None and v.base_price > 0) else self.effective_base_price
@@ -408,6 +421,7 @@ class Product(TimeStampedModel):
                 "price": str(eff_price),
                 "mrp": str(eff_mrp) if (eff_mrp and eff_mrp > eff_price) else "",
                 "discount": discount,
+                "image": variant_image_map.get(v.pk, ""),
             })
         return json.dumps(data)
 

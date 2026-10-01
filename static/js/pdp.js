@@ -7,6 +7,14 @@
         var url = variantGroup.getAttribute('data-price-url');
         var vid = this.value;
 
+        try {
+          var currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.set('variant_id', vid);
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+          }
+        } catch (e) { }
+
         document.querySelectorAll('.pdp-variant-id-input').forEach(function (input) {
           input.value = vid;
         });
@@ -236,9 +244,18 @@
       });
     });
 
-    var checkedRadio = document.querySelector('.variant-radio:checked');
-    if (checkedRadio) {
-      checkedRadio.dispatchEvent(new Event('change'));
+    var urlParams = new URLSearchParams(window.location.search);
+    var urlVid = urlParams.get('variant_id');
+    var radioToSelect = null;
+    if (urlVid) {
+      radioToSelect = document.querySelector('.variant-radio[value="' + urlVid + '"]');
+    }
+    if (!radioToSelect) {
+      radioToSelect = document.querySelector('.variant-radio:checked');
+    }
+    if (radioToSelect) {
+      radioToSelect.checked = true;
+      radioToSelect.dispatchEvent(new Event('change'));
     }
   }
 
