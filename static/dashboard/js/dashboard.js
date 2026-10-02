@@ -408,11 +408,56 @@
     }
   };
 
+  function initFilterSubmit() {
+    document.addEventListener("submit", function (e) {
+      var form = e.target;
+      var table = document.querySelector(".table-responsive");
+      if (!table || !form || (form.method && form.method.toLowerCase() === "post")) return;
+
+      var pathname = form.getAttribute("action") || window.location.pathname;
+      var cleanParams = new URLSearchParams();
+      new FormData(form).forEach(function (v, k) {
+        if (typeof v === "string" && v.trim()) cleanParams.append(k, v.trim());
+      });
+      var query = cleanParams.toString();
+      var url = pathname + (query ? "?" + query : "");
+
+      if (url === window.location.pathname + window.location.search) {
+        e.preventDefault();
+        return;
+      }
+
+      e.preventDefault();
+      fetch(url)
+        .then(function (res) { return res.text(); })
+        .then(function (html) {
+          var doc = new DOMParser().parseFromString(html, "text/html");
+          var newTable = doc.querySelector(".table-responsive");
+          var newForm = doc.querySelector("form[method='get']");
+          var newPagination = doc.querySelector(".pagination");
+          var curPagination = document.querySelector(".pagination");
+          var newActive = doc.querySelector("#active-filters");
+          var curActive = document.querySelector("#active-filters");
+
+          if (newTable) table.innerHTML = newTable.innerHTML;
+          if (newForm) form.innerHTML = newForm.innerHTML;
+          if (curPagination && newPagination) curPagination.innerHTML = newPagination.innerHTML;
+          else if (curPagination && !newPagination) curPagination.innerHTML = "";
+          if (curActive && newActive) curActive.innerHTML = newActive.innerHTML;
+          else if (curActive && !newActive) curActive.innerHTML = "";
+
+          window.history.replaceState({}, "", url);
+        })
+        .catch(function () { form.submit(); });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initSidebar();
     initFormValidation();
     initCharts();
     initFormsets();
     initTableLabels();
+    initFilterSubmit();
   });
 })();
