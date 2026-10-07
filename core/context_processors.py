@@ -49,7 +49,13 @@ def storefront(request: HttpRequest) -> dict[str, Any]:
 
     site_settings = get_site_settings()
 
+    from core.seo import resolve_default_og_image_url
+
     return {
+        # Fallbacks for pages that don't call seo_context(); view context overrides these.
+        "seo_og_image": resolve_default_og_image_url(request=request),
+        "seo_title": site_settings.site_name,
+        "seo_canonical_url": request.build_absolute_uri(request.path),
         "site_settings": site_settings,
         "category_tree": get_category_tree(),
         "cart_count": get_cart_count(request=request),

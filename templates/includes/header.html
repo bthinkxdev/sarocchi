@@ -1,6 +1,6 @@
 {% load i18n static %}
 <header class="site-header jm-header sticky-top">
-  <div class="jm-topbar d-block">
+  <div class="jm-topbar d-block d-lg-none">
     <div class="container jm-topbar__inner">
       <div class="jm-topbar__trust">
         <span class="jm-topbar__item">
@@ -64,6 +64,34 @@
         </a>
       </div>
 
+      <nav class="jm-nav d-none d-lg-block" aria-label="{% trans 'Primary' %}">
+        <ul class="jm-nav__links">
+        <li><a
+            class="jm-nav__link {% if request.resolver_match.url_name == 'homepage' and request.GET.ref != 'brands' %}is-active{% endif %}"
+            href="{% url 'cms:homepage' %}">{% trans "Home" %}</a></li>
+        {% for cat in category_tree %}
+        <li><a
+            class="jm-nav__link {% if request.resolver_match.kwargs.category_slug == cat.slug %}is-active{% endif %}"
+            href="{% url 'catalog:plp-category' category_slug=cat.slug %}">{{ cat.name }}</a></li>
+        {% endfor %}
+        <!-- <li><a
+            class="jm-nav__link {% if request.resolver_match.url_name == 'plp' or request.resolver_match.url_name == 'plp-category' %}is-active{% endif %}"
+            href="{% url 'catalog:plp' %}">{% trans "Shop All" %}</a></li>
+         <li><a
+            class="jm-nav__link {% if request.resolver_match.url_name == 'homepage' and request.GET.ref == 'brands' %}is-active{% endif %}"
+            href="{% url 'cms:homepage' %}?ref=brands#featured-brands">{% trans "Brands" %}</a></li> 
+
+        <li><a
+            class="jm-nav__link {% if request.resolver_match.url_name == 'contact-us' and request.GET.ref == 'services' %}is-active{% endif %}"
+            href="{% url 'core:contact-us' %}?ref=services">{% trans "Services" %}</a></li>
+        <li><a class="jm-nav__link {% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"
+            href="{% url 'core:about-us' %}">{% trans "About Us" %}</a></li>
+        <li><a
+            class="jm-nav__link {% if request.resolver_match.url_name == 'contact-us' and request.GET.ref != 'services' %}is-active{% endif %}"
+            href="{% url 'core:contact-us' %}">{% trans "Contact Us" %}</a></li> -->
+      </ul>
+      </nav>
+
       <form class="jm-search d-none d-lg-flex" action="{% url 'catalog:plp' %}" method="get" role="search" onsubmit="return document.getElementById('site-search-input').value.trim() !== ''">
 
         <div class="jm-search__field">
@@ -92,6 +120,29 @@
       </form>
 
       <div class="jm-header__actions">
+        <div class="dropdown d-none d-lg-block jm-info">
+          <button class="jm-action dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+            aria-label="{% trans 'Contact & info' %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+            <span class="jm-action__label d-none d-xxl-inline">{% trans "Contact" %}</span>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end jm-dropdown jm-info__menu">
+            <a class="jm-info__phone" href="tel:{{ site_settings.whatsapp_number|default:'+64220904112' }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              {% if site_settings.whatsapp_number %}{{ site_settings.whatsapp_number }}{% else %}+64 22 090 4112{% endif %}
+            </a>
+            <a class="jm-info__cta" href="{% url 'core:contact-us' %}">{% trans "Contact Us" %}</a>
+            <ul class="jm-info__trust">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>{% trans "Fast & Secure Delivery" %}</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>{% trans "Quality Assured Products" %}</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>{% trans "Crafted for Everyday Style" %}</li>
+            </ul>
+          </div>
+        </div>
         <div class="jm-search-nudge d-lg-none">
           <button type="button" class="jm-action jm-search-nudge__btn" id="mobile-search-open"
             aria-label="{% trans 'Search' %}" aria-controls="mobile-search-overlay" aria-expanded="false"
@@ -166,39 +217,6 @@
     </div>
 
   </div>
-
-  <nav class="jm-nav d-none d-lg-block" aria-label="{% trans 'Primary' %}">
-    <div class="container jm-nav__inner">
-
-
-      <ul class="jm-nav__links">
-        <li><a
-            class="jm-nav__link {% if request.resolver_match.url_name == 'homepage' and request.GET.ref != 'brands' %}is-active{% endif %}"
-            href="{% url 'cms:homepage' %}">{% trans "Home" %}</a></li>
-        {% for cat in category_tree %}
-        <li><a
-            class="jm-nav__link {% if request.resolver_match.kwargs.category_slug == cat.slug %}is-active{% endif %}"
-            href="{% url 'catalog:plp-category' category_slug=cat.slug %}">{{ cat.name }}</a></li>
-        {% endfor %}
-        <!-- <li><a
-            class="jm-nav__link {% if request.resolver_match.url_name == 'plp' or request.resolver_match.url_name == 'plp-category' %}is-active{% endif %}"
-            href="{% url 'catalog:plp' %}">{% trans "Shop All" %}</a></li>
-         <li><a
-            class="jm-nav__link {% if request.resolver_match.url_name == 'homepage' and request.GET.ref == 'brands' %}is-active{% endif %}"
-            href="{% url 'cms:homepage' %}?ref=brands#featured-brands">{% trans "Brands" %}</a></li> 
-
-        <li><a
-            class="jm-nav__link {% if request.resolver_match.url_name == 'contact-us' and request.GET.ref == 'services' %}is-active{% endif %}"
-            href="{% url 'core:contact-us' %}?ref=services">{% trans "Services" %}</a></li>
-        <li><a class="jm-nav__link {% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"
-            href="{% url 'core:about-us' %}">{% trans "About Us" %}</a></li>
-        <li><a
-            class="jm-nav__link {% if request.resolver_match.url_name == 'contact-us' and request.GET.ref != 'services' %}is-active{% endif %}"
-            href="{% url 'core:contact-us' %}">{% trans "Contact Us" %}</a></li> -->
-      </ul>
-
-    </div>
-  </nav>
 
   <div class="collapse d-lg-none" id="jmMainNav">
     <div class="jm-mobile-nav container">

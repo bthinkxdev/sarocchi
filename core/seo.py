@@ -44,10 +44,18 @@ def resolve_og_image_url(*, obj: Any, request: HttpRequest) -> str:
 
 
 def resolve_default_og_image_url(*, request: HttpRequest) -> str:
-    """Absolute URL of the site's default OG image (full logo, 1200x630, no crop/stretch)."""
+    """Absolute URL of the logo uploaded in Site Settings; static logo only if none is uploaded."""
     from django.templatetags.static import static
 
-    return request.build_absolute_uri(static("dashboard/images/og-default.png"))
+    from core.services import get_site_settings
+
+    logo = getattr(get_site_settings(), "logo", None)
+    if logo and getattr(logo, "name", ""):
+        try:
+            return request.build_absolute_uri(logo.url)
+        except ValueError:
+            pass
+    return request.build_absolute_uri(static("dashboard/images/logo.png"))
 
 
 def build_hreflang_urls(*, request: HttpRequest) -> list[dict[str, str]]:
@@ -175,7 +183,6 @@ def seo_context(
     og_image_width = og_image_height = None
     if not og_image:
         og_image = resolve_default_og_image_url(request=request)
-        og_image_width, og_image_height = 1200, 630
 
     return {
         "seo_title": title,
