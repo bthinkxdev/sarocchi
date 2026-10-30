@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% trans "Card Payment" %} | Sarocchi Luxe Designs{% endblock %}
+{% block title %}{% trans "Card Payment" %} | {{ site_settings.site_name|default:"Sarocchi Luxe Designs" }}{% endblock %}
 
 {% block content %}
 <div class="container page-container py-5">
@@ -30,7 +30,13 @@
           {% if not stripe_publishable_key or not client_secret %}
             <div class="alert alert-warning border-0 rounded-3 text-center py-3">
               <i class="bi bi-exclamation-triangle-fill text-warning fs-4 d-block mb-2"></i>
-              {% trans "Stripe payment credentials are not configured yet. Please configure your Stripe API keys in Admin Settings." %}
+              {% if error_code == "not_configured" %}
+                {% trans "Card payments are not available right now. Please choose another payment method." %}
+              {% elif error_code == "intent_closed" %}
+                {% trans "This payment session is no longer valid. Please return to checkout and try again." %}
+              {% else %}
+                {% trans "We could not load the secure payment form. Please try again in a moment." %}
+              {% endif %}
             </div>
             <div class="text-center mt-3">
               <a href="{% url 'checkout:checkout' %}" class="btn btn-outline-secondary rounded-pill px-4">{% trans "Return to Checkout" %}</a>
@@ -62,12 +68,14 @@
 </div>
 
 {% if stripe_publishable_key and client_secret %}
+{{ stripe_config|json_script:"stripe-config" }}
 <script src="https://js.stripe.com/v3/"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    const stripe = Stripe("{{ stripe_publishable_key }}");
-    const clientSecret = "{{ client_secret }}";
-    const returnUrl = "{{ return_url }}";
+    const config = JSON.parse(document.getElementById("stripe-config").textContent);
+    const stripe = Stripe(config.publishableKey);
+    const clientSecret = config.clientSecret;
+    const returnUrl = config.returnUrl;
 
     //customize stripe slements to match sarocchi branding
     const appearance = {

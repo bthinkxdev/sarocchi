@@ -123,53 +123,32 @@ def razorpay_webhook_view(request: HttpRequest) -> HttpResponse:
 def stripe_webhook_view(request: HttpRequest) -> HttpResponse:
     """
     Handle server-to-server Event Notifications from Stripe.
-    Authoritative source for payment success / failure.
+
+    Authenticated purely by the Stripe signature. This is the authoritative path
+    for payment success / failure / refund; every handler is idempotent, so
+    Stripe's retries and duplicate deliveries are safe.
     """
     from payments.adapters.stripe import StripePaymentAdapter
-    from payments.models import PaymentStatus, PaymentTransaction
-    from payments.services import confirm_payment_failed, confirm_payment_success
+    from payments.stripe_service import handle_charge_refunded, reconcile_payment_intent
 
     signature = request.headers.get("Stripe-Signature", "")
-    adapter = StripePaymentAdapter()
     try:
-        event = adapter.verify_webhook(payload=request.body, signature=signature)
+        event = StripePaymentAdapter().verify_webhook(payload=request.body, signature=signature)
     except ValueError as e:
         logger.warning("Rejected Stripe webhook: %s", str(e))
-        return JsonResponse({"status": "invalid_signature", "error": str(e)}, status=400)
+        return JsonResponse({"status": "invalid_signature"}, status=400)
 
+    event_id = event.get("id", "")
     event_type = event.get("type", "")
-    data_object = event.get("data", {}).get("object", {})
+    data_object = (event.get("data") or {}).get("object") or {}
 
-    logger.info("Received Stripe webhook: event=%s", event_type)
+    if event_type.startswith("payment_intent."):
+        result = reconcile_payment_intent(data_object)
+    elif event_type == "charge.refunded":
+        result = handle_charge_refunded(data_object)
+    else:
+        logger.debug("Ignoring Stripe webhook event %s (%s)", event_id, event_type)
+        return JsonResponse({"status": "ignored", "event": event_type}, status=200)
 
-    if event_type == "payment_intent.succeeded":
-        intent_id = data_object.get("id")
-        order_id = data_object.get("metadata", {}).get("order_id")
-
-        tx = None
-        if intent_id:
-            tx = PaymentTransaction.objects.filter(external_intent_id=intent_id).last()
-        if not tx and order_id:
-            tx = PaymentTransaction.objects.filter(order_id=order_id, gateway_key="stripe").last()
-
-        if tx and tx.status != PaymentStatus.SUCCESS:
-            tx.external_transaction_id = intent_id or ""
-            tx.save(update_fields=["external_transaction_id", "updated_at"])
-            confirm_payment_success(payment_transaction=tx, external_transaction_id=intent_id or "")
-            logger.info("Stripe Webhook: Order %s (tx=%s) confirmed SUCCESS", tx.order_id, tx.pk)
-
-    elif event_type in ("payment_intent.payment_failed", "payment_intent.canceled"):
-        intent_id = data_object.get("id")
-        order_id = data_object.get("metadata", {}).get("order_id")
-
-        tx = None
-        if intent_id:
-            tx = PaymentTransaction.objects.filter(external_intent_id=intent_id).last()
-        if not tx and order_id:
-            tx = PaymentTransaction.objects.filter(order_id=order_id, gateway_key="stripe").last()
-
-        if tx and tx.status == PaymentStatus.PENDING:
-            confirm_payment_failed(payment_transaction=tx)
-            logger.info("Stripe Webhook: Order %s (tx=%s) marked as FAILED", tx.order_id, tx.pk)
-
-    return JsonResponse({"status": "success", "event": event_type}, status=200)
+    logger.info("Stripe webhook %s (%s) -> %s", event_id, event_type, result.outcome)
+    return JsonResponse({"status": result.outcome, "event": event_type}, status=200)

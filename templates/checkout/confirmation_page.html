@@ -15,10 +15,17 @@
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
             </svg>
           </div>
+          {% if payment_pending %}
+          <h1 class="h3 fw-bold text-dark mb-2">{% trans "Confirming your payment..." %}</h1>
+          <p class="text-muted mb-0 fs-6">
+            {% blocktrans with number=order.order_number %}Order <strong class="text-dark">#{{ number }}</strong> is awaiting payment confirmation. This page will update automatically.{% endblocktrans %}
+          </p>
+          {% else %}
           <h1 class="h3 fw-bold text-dark mb-2">{% trans "Thank you for your order!" %}</h1>
           <p class="text-muted mb-0 fs-6">
             {% blocktrans with number=order.order_number %}Order <strong class="text-dark">#{{ number }}</strong> has been confirmed.{% endblocktrans %}
           </p>
+          {% endif %}
         </div>
 
         <div class="card-body px-4 px-md-5 pb-5 pt-4">
@@ -96,6 +103,19 @@
   </div>
 </div>
 
+{% if payment_pending %}
+<script>
+  (function () {
+    //the webhook settles the order within seconds; poll a bounded number of times
+    var key = 'payment_poll_{{ order.pk }}';
+    var tries = parseInt(sessionStorage.getItem(key) || '0', 10);
+    if (tries < 20) {
+      sessionStorage.setItem(key, String(tries + 1));
+      setTimeout(function () { window.location.reload(); }, 3000);
+    }
+  })();
+</script>
+{% else %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     var orderNumber = '{{ order.order_number|escapejs }}';
@@ -127,4 +147,5 @@
     try { sessionStorage.removeItem('checkout_draft'); } catch(e) {}
   });
 </script>
+{% endif %}
 {% endblock %}

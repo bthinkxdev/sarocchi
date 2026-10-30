@@ -119,13 +119,23 @@ def process_payment(
     inline; async gateways complete via webhook → confirm_payment_success.
     """
     adapter = get_payment_adapter(gateway_key=gateway_key)
-    metadata = {"order_id": order.pk, "order_number": order.order_number, **payment_data}
 
-    #clean up: mark any previous abandoned payment attempts as failed
-    PaymentTransaction.objects.filter(
-        order=order,
-        status=PaymentStatus.PENDING
-    ).update(status=PaymentStatus.FAILED)
+    #retire previous abandoned attempts: mark them failed and, where the processor
+    #keeps an intent payable after we abandon it, cancel it there too so a stale
+    #intent can never be paid in parallel with the new one
+    superseded = list(
+        PaymentTransaction.objects.filter(order=order, status=PaymentStatus.PENDING)
+    )
+    for previous in superseded:
+        previous.status = PaymentStatus.FAILED
+        previous.save(update_fields=["status", "updated_at"])
+        if previous.external_intent_id:
+            try:
+                get_payment_adapter(gateway_key=previous.gateway_key).cancel_payment_intent(
+                    intent_id=previous.external_intent_id
+                )
+            except KeyError:
+                pass
 
     payment_tx = PaymentTransaction.objects.create(
         order=order,
@@ -133,8 +143,14 @@ def process_payment(
         amount=order.total_amount,
         currency=order.currency,
         status=PaymentStatus.PENDING,
-        metadata=metadata,
+        metadata={"order_id": order.pk, "order_number": order.order_number, **payment_data},
     )
+    metadata = {
+        "order_id": order.pk,
+        "order_number": order.order_number,
+        "payment_transaction_id": payment_tx.pk,
+        **payment_data,
+    }
 
     intent = adapter.create_payment_intent(
         amount=order.total_amount,

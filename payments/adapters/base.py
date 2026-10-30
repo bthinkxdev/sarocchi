@@ -48,6 +48,12 @@ class PaymentGatewayAdapter(ABC):
     ) -> PaymentIntentResult:
         """Create a payment intent with the external or internal processor."""
 
+    def cancel_payment_intent(self, *, intent_id: str) -> None:
+        """
+        Cancel an abandoned, unpaid intent at the processor. No-op by default;
+        gateways whose intents stay payable after we abandon them override this.
+        """
+
     @abstractmethod
     def verify_webhook(self, *, payload: bytes, signature: str) -> dict[str, Any]:
         """Verify and parse a webhook payload; raise on invalid signature."""

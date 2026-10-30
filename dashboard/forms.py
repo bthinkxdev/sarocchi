@@ -728,8 +728,9 @@ class SiteSettingsForm(forms.ModelForm):
         widgets = {
             "cybersource_secret_key": forms.PasswordInput(render_value=True),
             "afterpay_secret_key": forms.PasswordInput(render_value=True),
-            "stripe_secret_key": forms.PasswordInput(render_value=True),
-            "stripe_webhook_secret": forms.PasswordInput(render_value=True),
+            # Stripe secrets are never echoed back into the page; blank on save keeps the stored value.
+            "stripe_secret_key": forms.PasswordInput(render_value=False),
+            "stripe_webhook_secret": forms.PasswordInput(render_value=False),
         }
         labels = {
             "vendor_email": "Email",
@@ -764,6 +765,10 @@ class SiteSettingsForm(forms.ModelForm):
             self.fields.pop("stripe_publishable_key", None)
             self.fields.pop("stripe_secret_key", None)
             self.fields.pop("stripe_webhook_secret", None)
+        for name in self.STRIPE_SECRET_FIELDS:
+            if name in self.fields and getattr(self.instance, name, ""):
+                self.fields[name].widget.attrs["placeholder"] = "Saved - leave blank to keep the current value"
+                self.fields[name].help_text = "A value is saved. Leave blank to keep it, or enter a new one to replace it."
         for field_name, field in self.fields.items():
             if field_name != "logo":
                 if isinstance(field.widget, forms.CheckboxInput):
@@ -773,6 +778,41 @@ class SiteSettingsForm(forms.ModelForm):
                         field.widget.attrs["class"] += " form-control"
                     else:
                         field.widget.attrs["class"] = "form-control"
+
+    STRIPE_SECRET_FIELDS = ("stripe_secret_key", "stripe_webhook_secret")
+
+    def _keep_stored_secret(self, name: str) -> str:
+        value = (self.cleaned_data.get(name) or "").strip()
+        return value or getattr(self.instance, name, "")
+
+    def clean_stripe_secret_key(self):
+        return self._keep_stored_secret("stripe_secret_key")
+
+    def clean_stripe_webhook_secret(self):
+        return self._keep_stored_secret("stripe_webhook_secret")
+
+    def clean(self):
+        cleaned = super().clean()
+        if "stripe_publishable_key" not in self.fields:
+            return cleaned
+
+        # Stripe is only usable with all three credentials, in one consistent mode.
+        from payments.adapters.stripe import validate_stripe_keys
+
+        keys = {
+            "stripe_publishable_key": (cleaned.get("stripe_publishable_key") or "").strip(),
+            "stripe_secret_key": (cleaned.get("stripe_secret_key") or "").strip(),
+            "stripe_webhook_secret": (cleaned.get("stripe_webhook_secret") or "").strip(),
+        }
+        if any(keys.values()):
+            problems = validate_stripe_keys(
+                publishable_key=keys["stripe_publishable_key"],
+                secret_key=keys["stripe_secret_key"],
+                webhook_secret=keys["stripe_webhook_secret"],
+            )
+            for problem in problems:
+                self.add_error(None, f"Stripe: {problem}")
+        return cleaned
 
     def save(self, commit=True):
         instance = super().save(commit)

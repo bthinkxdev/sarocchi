@@ -33,6 +33,11 @@ PAYMENT_GATEWAYS: dict[str, PaymentGatewayAdapter] = {
     CashOnDeliveryAdapter.key: CashOnDeliveryAdapter(),
 }
 
+# Gateways offered to customers at checkout. Razorpay and CyberSource adapters stay
+# registered (and their webhooks live) so orders already in flight still settle, but
+# they can no longer be selected for a new order.
+CHECKOUT_GATEWAY_KEYS: frozenset[str] = frozenset({"stripe", "afterpay", "cod"})
+
 
 def get_payment_adapter(*, gateway_key: str) -> PaymentGatewayAdapter:
     """Look up a registered adapter by key."""
