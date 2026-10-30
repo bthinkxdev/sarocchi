@@ -683,6 +683,9 @@ class SiteSettingsForm(forms.ModelForm):
         "afterpay_merchant_id",
         "afterpay_secret_key",
         "afterpay_environment",
+        "stripe_publishable_key",
+        "stripe_secret_key",
+        "stripe_webhook_secret",
     ]
 
     class Meta:
@@ -718,10 +721,15 @@ class SiteSettingsForm(forms.ModelForm):
             "afterpay_merchant_id",
             "afterpay_secret_key",
             "afterpay_environment",
+            "stripe_publishable_key",
+            "stripe_secret_key",
+            "stripe_webhook_secret",
         ]
         widgets = {
             "cybersource_secret_key": forms.PasswordInput(render_value=True),
             "afterpay_secret_key": forms.PasswordInput(render_value=True),
+            "stripe_secret_key": forms.PasswordInput(render_value=True),
+            "stripe_webhook_secret": forms.PasswordInput(render_value=True),
         }
         labels = {
             "vendor_email": "Email",
@@ -752,6 +760,10 @@ class SiteSettingsForm(forms.ModelForm):
             self.fields.pop("afterpay_merchant_id", None)
             self.fields.pop("afterpay_secret_key", None)
             self.fields.pop("afterpay_environment", None)
+        if self.instance and not getattr(self.instance, "enable_stripe", True):
+            self.fields.pop("stripe_publishable_key", None)
+            self.fields.pop("stripe_secret_key", None)
+            self.fields.pop("stripe_webhook_secret", None)
         for field_name, field in self.fields.items():
             if field_name != "logo":
                 if isinstance(field.widget, forms.CheckboxInput):

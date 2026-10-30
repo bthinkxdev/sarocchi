@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import Any, Optional
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -244,12 +245,16 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     settings = get_site_settings()
     enable_cod = getattr(settings, "enable_cod", True)
     enable_razorpay = getattr(settings, "enable_razorpay", True)
-    enable_cybersource = getattr(settings, "enable_cybersource", True)
+    enable_cybersource = getattr(settings, "enable_cybersource", False)
     enable_afterpay = getattr(settings, "enable_afterpay", True)
+    enable_stripe = getattr(settings, "enable_stripe", True)
 
-    from payments.adapters.concrete import _get_razorpay_credentials, _get_cybersource_credentials
+    from payments.adapters.concrete import _get_razorpay_credentials
+    from payments.adapters.cybersource import _get_cybersource_credentials
+    from payments.adapters.stripe import _get_stripe_credentials
     razorpay_key, razorpay_secret = _get_razorpay_credentials()
     cs_merchant_id, cs_key_id, cs_secret_key, _ = _get_cybersource_credentials()
+    stripe_pub_key, stripe_sec_key, _ = _get_stripe_credentials()
     
     available_gateways = {}
     for key, adapter in PAYMENT_GATEWAYS.items():
@@ -263,6 +268,9 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
                 continue
         if key == "afterpay":
             if not enable_afterpay:
+                continue
+        if key == "stripe":
+            if not enable_stripe or not stripe_pub_key or not stripe_sec_key:
                 continue
         available_gateways[key] = adapter
         
@@ -535,7 +543,7 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             status=200,
         )
 
-    if gateway_key.startswith("cybersource") and not getattr(settings, "enable_cybersource", True):
+    if gateway_key.startswith("cybersource") and not getattr(settings, "enable_cybersource", False):
         return render(
             request,
             "checkout/partials/errors.html",
@@ -548,6 +556,14 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             request,
             "checkout/partials/errors.html",
             {"errors": {"gateway_key": ["Afterpay payment is currently disabled."]}},
+            status=200,
+        )
+
+    if gateway_key == "stripe" and not getattr(settings, "enable_stripe", True):
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"gateway_key": ["Card payment is currently disabled."]}},
             status=200,
         )
 
@@ -632,6 +648,14 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             return response
         return redirect(pay_url)
 
+    if gateway_key == "stripe":
+        pay_url = reverse("checkout:stripe-pay", kwargs={"order_id": order.pk})
+        if request.headers.get("HX-Request"):
+            response = HttpResponse()
+            response["HX-Redirect"] = pay_url
+            return response
+        return redirect(pay_url)
+
     confirmation_url = reverse("checkout:confirmation", kwargs={"order_id": order.pk})
     if request.headers.get("HX-Request"):
         response = HttpResponse()
@@ -647,6 +671,17 @@ def checkout_confirmation_view(request: HttpRequest, order_id: int) -> HttpRespo
     from orders.models import Order
     from django.shortcuts import get_object_or_404
     order = get_object_or_404(Order, pk=order_id)
+
+    #browser return from Stripe elements redirect
+    payment_intent_id = request.GET.get("payment_intent")
+    redirect_status = request.GET.get("redirect_status")
+    if payment_intent_id and redirect_status == "succeeded":
+        from payments.models import PaymentStatus, PaymentTransaction
+        from payments.services import confirm_payment_success
+        tx = PaymentTransaction.objects.filter(order=order, external_intent_id=payment_intent_id).last()
+        if tx and tx.status != PaymentStatus.SUCCESS:
+            confirm_payment_success(payment_transaction=tx, external_transaction_id=payment_intent_id)
+
     return render(
         request,
         "checkout/confirmation_page.html",
@@ -1128,3 +1163,38 @@ def afterpay_callback_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, "Afterpay payment could not be completed.")
         return redirect("checkout:checkout")
 
+
+@never_cache
+@require_GET
+def stripe_pay_view(request: HttpRequest, order_id: int) -> HttpResponse:
+    """
+    Render Stripe Payment Element checkout page.
+    """
+    from django.shortcuts import get_object_or_404, redirect
+    from orders.models import Order, OrderStatus
+    from payments.models import PaymentTransaction
+
+    order = get_object_or_404(Order, pk=order_id)
+    if order.order_status != OrderStatus.CHECKOUT_PENDING:
+        return redirect("checkout:confirmation", order_id=order.pk)
+
+    payment_tx = PaymentTransaction.objects.filter(order=order, gateway_key="stripe").last()
+    if not payment_tx:
+        return redirect("checkout:checkout")
+
+    from payments.adapters.stripe import _get_stripe_credentials
+    pub_key, _, _ = _get_stripe_credentials()
+    client_secret = payment_tx.metadata.get("client_secret", "")
+
+    return render(
+        request,
+        "checkout/stripe_pay.html",
+        {
+            "order": order,
+            "stripe_publishable_key": pub_key,
+            "client_secret": client_secret,
+            "return_url": request.build_absolute_uri(
+                reverse("checkout:confirmation", kwargs={"order_id": order.pk})
+            ),
+        },
+    )

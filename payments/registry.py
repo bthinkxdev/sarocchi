@@ -14,14 +14,16 @@ from payments.adapters.concrete import (
     RazorpayCardAdapter,
     RazorpayNetbankingAdapter,
     RazorpayWalletAdapter,
-    CyberSourceCardAdapter,
     AfterpayAdapter,
 )
+from payments.adapters.cybersource import CyberSourceCardAdapter
+from payments.adapters.stripe import StripePaymentAdapter
 
 if TYPE_CHECKING:
     from payments.adapters.base import PaymentGatewayAdapter
 
 PAYMENT_GATEWAYS: dict[str, PaymentGatewayAdapter] = {
+    StripePaymentAdapter.key: StripePaymentAdapter(),
     RazorpayUPIAdapter.key: RazorpayUPIAdapter(),
     RazorpayCardAdapter.key: RazorpayCardAdapter(),
     RazorpayNetbankingAdapter.key: RazorpayNetbankingAdapter(),

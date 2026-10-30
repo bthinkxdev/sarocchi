@@ -405,6 +405,29 @@ class SiteSettings(TimeStampedModel):
         verbose_name="Afterpay Environment",
         help_text="Run environment for Afterpay API requests.",
     )
+    enable_stripe = models.BooleanField(
+        default=True,
+        verbose_name="Enable Stripe",
+        help_text="Enable or disable Stripe payment option at checkout.",
+    )
+    stripe_publishable_key = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Stripe Publishable Key",
+        help_text="Stripe Publishable API Key (pk_test_... or pk_live_...).",
+    )
+    stripe_secret_key = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Stripe Secret Key",
+        help_text="Stripe Secret API Key (sk_test_... or sk_live_...).",
+    )
+    stripe_webhook_secret = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name="Stripe Webhook Secret",
+        help_text="Stripe Webhook Signing Secret (whsec_...).",
+    )
 
     class Meta:
         verbose_name = "Site settings"
