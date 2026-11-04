@@ -1,5 +1,6 @@
 {% load i18n %}
 {% for collection in section_context.collections %}
+{% if collection.products.all %}
 <section class="jm-section jm-rail-section">
   <div class="container">
     <div class="section-header jm-section-header">
@@ -29,4 +30,5 @@
     </div>
   </div>
 </section>
+{% endif %}
 {% endfor %}

@@ -30,13 +30,8 @@
 
       <div class="jm-pdp-buybox__price-row">
         <p class="pdp-price jm-pdp-buybox__price" id="pdp-price">
-          {% if price_data.is_flash_sale == "true" %}
-          <span class="was" id="pdp-price-original">{% money_label price_data.original_price display_currency %}</span>
-          {% elif price_data.has_mrp_discount == "true" %}
-          <span class="was" id="pdp-price-mrp" style="text-decoration: line-through; margin-right: 8px;">{% money_label price_data.mrp display_currency %}</span>
-          {% else %}
-          <span class="was" id="pdp-price-mrp" style="text-decoration: line-through; margin-right: 8px; display: none;"></span>
-          {% endif %}
+          <span class="was" id="pdp-price-original" {% if price_data.is_flash_sale != "true" %}style="display: none;"{% endif %}>{% if price_data.original_price %}{% money_label price_data.original_price display_currency %}{% endif %}</span>
+          <span class="was" id="pdp-price-mrp" style="text-decoration: line-through; margin-right: 8px; {% if price_data.is_flash_sale == 'true' or price_data.has_mrp_discount != 'true' %}display: none;{% endif %}">{% if price_data.mrp %}{% money_label price_data.mrp display_currency %}{% endif %}</span>
           <span id="pdp-price-value">{% money_label price_data.price display_currency %}</span>
         </p>
         <p class="jm-pdp-buybox__stock {% if not price_data.is_in_stock %}is-out{% elif price_data.stock_quantity <= price_data.low_stock_threshold %}is-low{% else %}is-in{% endif %}"
@@ -82,6 +77,15 @@
             </label>
             {% endfor %}
           </div>
+        </div>
+        {% elif product.size_chart and product.size_chart.is_active %}
+        <div class="mb-3">
+          <a href="#" data-bs-toggle="modal" data-bs-target="#sizeGuideModal" class="text-decoration-none text-dark small" style="font-weight: 500; text-underline-offset: 4px; text-decoration: underline !important;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-grid me-1" viewBox="0 0 16 16" style="margin-top: -2px;">
+              <path d="M5 1v8H1V1h4zM1 0a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1zm13 2v5H9V2h5zM9 1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9zM5 11v4H1v-4h4zM1 10a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1H1zm13 2v2H9v-2h5zM9 11a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H9z"/>
+            </svg>
+            {% trans "Size Guide" %}
+          </a>
         </div>
         {% endif %}
 
@@ -387,15 +391,13 @@
             }
           </style>
 
-          {% if product.size_chart.image %}
-            <div class="text-center mb-4">
-              <img src="{{ product.size_chart.image.url }}" alt="{% trans 'Size Guide' %}" class="img-fluid rounded w-100" style="max-height: 70vh; object-fit: contain;">
-            </div>
-          {% endif %}
-          
           {% if product.size_chart.content_html %}
             <div class="size-chart-content table-responsive">
               {{ product.size_chart.content_html|safe }}
+            </div>
+          {% elif product.size_chart.image %}
+            <div class="text-center">
+              <img src="{{ product.size_chart.image.url }}" alt="{% trans 'Size Guide' %}" class="img-fluid rounded w-100" style="max-height: 70vh; object-fit: contain;">
             </div>
           {% endif %}
         </div>

@@ -356,6 +356,13 @@
       return fullCode;
     }
 
+    var verifyForm = document.getElementById('otp-verify-form');
+    if (verifyForm) {
+      verifyForm.addEventListener('submit', function () {
+        history.replaceState(null, '', '{% if next %}{{ next|escapejs }}{% else %}{% url "accounts:dashboard" %}{% endif %}');
+      });
+    }
+
     digitFields.forEach(function(field, idx) {
       field.addEventListener('input', function(e) {
         var cleanVal = e.target.value.replace(/[^0-9]/g, '');

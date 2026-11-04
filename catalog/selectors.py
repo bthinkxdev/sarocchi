@@ -821,7 +821,11 @@ def get_plp_filter_options() -> dict:
                 
     attributes = list(attributes_dict.values())
     
-    collections = list(Collection.objects.filter(is_active=True).order_by("name"))
+    collections = list(
+        Collection.objects.filter(is_active=True, products__is_active=True)
+        .distinct()
+        .order_by("name")
+    )
         
     return {
         "categories": categories,

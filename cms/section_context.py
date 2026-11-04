@@ -335,6 +335,8 @@ def _featured_collections(config: dict[str, Any]) -> dict[str, Any]:
     else:
         collections = list(base_qs)
 
+    collections = [col for col in collections if col.products.all()]
+
     all_products = []
     for col in collections:
         all_products.extend(col.products.all())

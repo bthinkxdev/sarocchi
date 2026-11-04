@@ -84,6 +84,9 @@ def add_to_cart(
 
     item = CartItem.objects.filter(cart=cart, product=product, variant=variant).first()
     
+    if variant is not None:
+        CartItem.objects.filter(cart=cart, product=product, variant__isnull=True).delete()
+
     if item:
         new_quantity = quantity if overwrite else item.quantity + quantity
     else:
@@ -153,9 +156,8 @@ def adjust_cart_item_quantity(
     new_quantity = item.quantity + delta
 
     if item.variant is None and item.product.variants.exists():
-        max_stock = 0
-    else:
-        max_stock = item.variant.stock_quantity if item.variant else item.product.stock_quantity
+        raise InsufficientStockError(_("Product has a change. Please revisit the product."))
+    max_stock = item.variant.stock_quantity if item.variant else item.product.stock_quantity
         
     if new_quantity > max_stock:
         if delta < 0:

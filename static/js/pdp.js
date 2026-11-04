@@ -101,6 +101,16 @@
               elPriceValue.textContent = symbol + ' ' + parseFloat(data.price).toFixed(2).replace(/\.00$/, '');
             }
 
+            var elOriginal = document.getElementById('pdp-price-original');
+            if (elOriginal) {
+              if (data.is_flash_sale === 'true' && (data.formatted_original_price || data.original_price)) {
+                elOriginal.textContent = data.formatted_original_price || (symbol + ' ' + parseFloat(data.original_price).toFixed(2).replace(/\.00$/, ''));
+                elOriginal.style.display = 'inline';
+              } else {
+                elOriginal.style.display = 'none';
+              }
+            }
+
             var elMrp = document.getElementById('pdp-price-mrp');
             if (elMrp) {
               if (data.is_flash_sale !== 'true' && data.has_mrp_discount === 'true' && data.mrp) {

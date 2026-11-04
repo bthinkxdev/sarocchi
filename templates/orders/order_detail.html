@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% load i18n storefront_tags %}
 
-{% block title %}{% trans "Order Details" %} #{{ order.order_number }} | {{ site_settings.site_name|default:"Sarocchi Luxe Designs" }}{% endblock %}
+{% block title %}{% trans "Order Details" %} {{ order.order_number }} | {{ site_settings.site_name|default:"Sarocchi Luxe Designs" }}{% endblock %}
 
 {% block content %}
 <div class="container page-container py-4">
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-    <h1 class="section-title mb-0 fs-3">{% trans "Order" %} <span class="fw-bold">#{{ order.order_number }}</span></h1>
+    <h1 class="section-title mb-0 fs-3">{% trans "Order" %} <span class="fw-bold">{{ order.order_number }}</span></h1>
     <style>
       .hide-scrollbar::-webkit-scrollbar { display: none; }
       .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

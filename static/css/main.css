@@ -4091,6 +4091,19 @@ body.mobile-search-open .jm-wa-float {
 }
 
 @media (max-width: 991.98px) {
+  #jmMainNav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
+  }
+
+  body:has(#jmMainNav.show) {
+    overflow: hidden;
+  }
+
   .jm-header__main-inner {
     grid-template-columns: auto 1fr auto;
     min-height: 64px;

@@ -292,7 +292,7 @@
               <i class="ti ti-plus"></i> Add option like size or color
             </button>
             <hr>
-            <button type="button" class="btn btn-primary btn-sm mt-2" id="generate_variants_btn">Generate Variants</button>
+            <button type="button" class="btn btn-primary btn-sm mt-2" id="generate_variants_btn" {% if existing_variants %}disabled{% endif %}>Generate Variants</button>
           </div>
 
           <div class="table-responsive">
@@ -791,8 +791,8 @@ document.addEventListener("DOMContentLoaded", function() {
             if (hasAttr) {
               const tr = input.closest('tr');
               if (tr) {
-                const variantNameEl = tr.querySelector('strong');
-                const variantName = variantNameEl ? variantNameEl.textContent : 'Unknown Variant';
+                const nameInput = tr.querySelector('input[name="variant_name[]"]');
+                const variantName = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : (tr.querySelector('strong')?.textContent || 'Unknown Variant');
                 usedInVariants.push(variantName);
               }
             }
@@ -817,6 +817,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
   const generateBtn = document.getElementById('generate_variants_btn');
   if (generateBtn) {
+    if (document.querySelectorAll('#variants_tbody tr').length > 0) {
+      generateBtn.disabled = true;
+    }
     generateBtn.addEventListener('click', function() {
       const rows = document.querySelectorAll('.attr-dynamic-row');
       if (rows.length === 0) {
@@ -975,14 +978,15 @@ document.addEventListener("DOMContentLoaded", function() {
             updateSelectOptions(select, generatedVariants);
           });
         });
+        generateBtn.disabled = true;
       };
 
-      if (window.ActionLoader) {
-        window.ActionLoader.execute(generateBtn, "Generating variants...", executeVariantsGeneration);
-      } else {
-        executeVariantsGeneration();
-      }
+      executeVariantsGeneration();
+      generateBtn.disabled = true;
     });
+
+    document.getElementById('dynamic-attributes-container')?.addEventListener('input', () => { generateBtn.disabled = false; });
+    document.getElementById('add_dynamic_attr_btn')?.addEventListener('click', () => { generateBtn.disabled = false; });
   }
 
   const tbody = document.getElementById('variants_tbody');
@@ -990,6 +994,7 @@ document.addEventListener("DOMContentLoaded", function() {
     tbody.addEventListener('click', function(e) {
       if (e.target.closest('.remove-variant-btn')) {
         e.target.closest('tr').remove();
+        if (!tbody.querySelector('tr') && generateBtn) generateBtn.disabled = false;
       }
     });
   }

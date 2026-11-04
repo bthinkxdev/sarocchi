@@ -338,7 +338,12 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
 
     cart = _get_checkout_cart(request=request, create=False)
     if cart is None:
-        raise Http404("Cart not found.")
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"__all__": ["Your checkout session or cart was not found. Please refresh the page."]}},
+            status=200,
+        )
 
     if request.user.is_authenticated:
         from accounts.services import ensure_customer_profile_for_user
@@ -568,17 +573,16 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             cart.delivery_charge = new_charge
             cart.save(update_fields=["delivery_charge", "updated_at"])
 
-    # summary is already retrieved on line 375 with skip_delivery_charge_calculation=True
+    checkout_errors = []
+    for l in summary.lines:
+        if l.item.unit_price_at_add is not None and l.unit_price_at_add != l.item.unit_price_at_add:
+            l.item.unit_price_at_add = l.unit_price_at_add
+            l.item.save(update_fields=["unit_price_at_add", "updated_at"])
+            checkout_errors.append(f"Price for '{l.product.name}' has changed. Please review before ordering.")
     if summary.has_stock_issues:
-        from django.utils.translation import gettext as _
-        is_buy_now = request.session.get("checkout_mode") == "buy_now"
-        msg = _("This item just went out of stock or quantity exceeds available stock. Please review your order summary.") if is_buy_now else _("Some items in your cart are out of stock. Please review your order summary to adjust them.")
-        response = render(
-            request,
-            "checkout/partials/errors.html",
-            {"errors": {"__all__": [msg]}},
-            status=200,
-        )
+        checkout_errors.append("Some items are out of stock or exceed available quantity. Please review your order.")
+    if checkout_errors:
+        response = render(request, "checkout/partials/errors.html", {"errors": {"__all__": checkout_errors}}, status=200)
         response["HX-Trigger"] = "stockChanged"
         return response
 
@@ -600,16 +604,33 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
         )
         response["HX-Trigger"] = "stockChanged"
         return response
+    except Exception as exc:
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"__all__": [str(exc)]}},
+            status=200,
+        )
 
     grant_order_access(request=request, order=order)
 
-    payment_data = {}
+    payment_data = {
+        "request_host": request.get_host(),
+    }
 
-    process_payment(
-        order=order,
-        gateway_key=gateway_key,
-        payment_data=payment_data,
-    )
+    try:
+        process_payment(
+            order=order,
+            gateway_key=gateway_key,
+            payment_data=payment_data,
+        )
+    except Exception as exc:
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"__all__": [f"Payment error: {str(exc)}"]}},
+            status=200,
+        )
 
     if gateway_key.startswith("razorpay"):
         pay_url = reverse("checkout:razorpay-pay", kwargs={"order_id": order.pk})
@@ -859,7 +880,12 @@ def checkout_coupon_apply_view(request: HttpRequest) -> HttpResponse:
 
     cart = _get_checkout_cart(request=request, create=False)
     if cart is None:
-        raise Http404("Cart not found.")
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"__all__": ["Your checkout session or cart was not found. Please refresh the page."]}},
+            status=200,
+        )
 
     try:
         apply_coupon(cart=cart, code=form.cleaned_data["code"])
@@ -894,6 +920,8 @@ def cybersource_pay_view(request: HttpRequest, order_id: int) -> HttpResponse:
     from django.shortcuts import get_object_or_404, redirect
 
     order = get_object_or_404(Order, pk=order_id)
+    if not can_access_order(request=request, order=order):
+        raise Http404("Order not found.")
     if order.order_status != OrderStatus.CHECKOUT_PENDING:
         return redirect("catalog:plp")
 
@@ -1052,6 +1080,8 @@ def afterpay_pay_view(request: HttpRequest, order_id: int) -> HttpResponse:
     from django.shortcuts import get_object_or_404, redirect
 
     order = get_object_or_404(Order, pk=order_id)
+    if not can_access_order(request=request, order=order):
+        raise Http404("Order not found.")
     if order.order_status != OrderStatus.CHECKOUT_PENDING:
         return redirect("catalog:plp")
 
@@ -1063,6 +1093,14 @@ def afterpay_pay_view(request: HttpRequest, order_id: int) -> HttpResponse:
 
     redirect_url = payment_tx.metadata.get("redirect_url", "")
     is_simulation = payment_tx.metadata.get("is_simulation", False)
+
+    from django.conf import settings
+    from django.contrib import messages
+    from django.utils.translation import gettext as _
+
+    if is_simulation and not settings.DEBUG:
+        messages.error(request, _("Afterpay is currently unavailable. Please choose another payment method."))
+        return redirect("checkout:checkout")
 
     #if it is a real external Afterpay checkout URL, redirect immediately
     if redirect_url and not is_simulation and redirect_url.startswith("http"):
@@ -1124,7 +1162,14 @@ def afterpay_callback_view(request: HttpRequest) -> HttpResponse:
             or order_token.startswith("sim_")
         )
         if is_sim:
-            #sandbox simulator instant approval
+            from django.conf import settings
+            from django.utils.translation import gettext as _
+            if not settings.DEBUG:
+                confirm_payment_failed(payment_transaction=payment_tx)
+                messages.error(request, _("Invalid payment verification."))
+                return redirect("checkout:checkout")
+
+            # sandbox simulator instant approval (DEBUG only)
             confirm_payment_success(payment_transaction=payment_tx, external_transaction_id=order_token or f"sim_tx_{order.pk}")
             request.session.pop("afterpay_order_pk", None)
             return redirect("checkout:confirmation", order_id=order.id)

@@ -83,15 +83,15 @@ def refund_policy_view(request: HttpRequest) -> HttpResponse:
     return render(request, "core/refund_policy.html", context)
 
 
-@require_GET
-def contact_us_view(request: HttpRequest) -> HttpResponse:
+def contact_us_view(request: HttpRequest, form: ContactInquiryForm | None = None) -> HttpResponse:
     """Render the static Contact Us page with a contact form."""
     import time
 
-    form = ContactInquiryForm()
-    if request.user.is_authenticated:
-        form.initial["name"] = request.user.get_full_name() or request.user.email
-        form.initial["email"] = request.user.email
+    if form is None:
+        form = ContactInquiryForm()
+        if request.user.is_authenticated:
+            form.initial["name"] = request.user.get_full_name() or request.user.email
+            form.initial["email"] = request.user.email
 
     context = seo_context(
         request=request,
@@ -122,7 +122,7 @@ def submit_inquiry_view(request: HttpRequest) -> HttpResponse:
         except ValidationError as exc:
             msg = exc.messages[0] if getattr(exc, "messages", None) else str(exc)
             messages.error(request, msg)
-            return redirect(request.META.get("HTTP_REFERER", "core:contact-us"))
+            return contact_us_view(request, form=form)
 
         inquiry = form.save()
 
@@ -157,8 +157,7 @@ def submit_inquiry_view(request: HttpRequest) -> HttpResponse:
         messages.success(request, _("Your message has been sent successfully. We will get back to you soon."))
     else:
         messages.error(request, _("There was an error sending your message. Please check the form and try again."))
-    
-    return redirect(request.META.get("HTTP_REFERER", "core:contact-us"))
+        return contact_us_view(request, form=form)
 
 
 @require_GET

@@ -177,6 +177,9 @@ a {
   .sidebar.mobile-show {
     left: 0;
   }
+  body:has(.sidebar.mobile-show) {
+    overflow: hidden;
+  }
   .topbar {
     margin-left: 0 !important;
     width: 100% !important;

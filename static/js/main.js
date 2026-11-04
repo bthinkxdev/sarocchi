@@ -6,6 +6,7 @@
   var progressEl = document.getElementById('htmx-progress');
   var pageLoader = document.getElementById('jm-loader');
   var pendingGlobalProgress = 0;
+  var lastSync = 0;
 
   function hidePageLoader() {
     if (!pageLoader || pageLoader.classList.contains('is-done')) {
@@ -110,6 +111,10 @@
   });
   window.addEventListener('pageshow', function () {
     hidePageLoader();
+    lastSync = 0;
+    if (typeof syncCartStatus === 'function') syncCartStatus();
+    var drawer = document.getElementById('cart-drawer-body');
+    if (drawer) delete drawer.dataset.drawerHydrated;
   });
   // Fallback if load already fired or assets cached
   if (document.readyState === 'complete') {
@@ -144,13 +149,29 @@
     });
   }
 
+  var cartDrawerScroll = 0;
+  document.body.addEventListener('htmx:beforeSwap', function (event) {
+    var scrollEl = event.detail.target && event.detail.target.querySelector('.cart-drawer-scroll');
+    cartDrawerScroll = scrollEl ? scrollEl.scrollTop : 0;
+  });
+
   document.body.addEventListener('htmx:afterSwap', function (event) {
     if (event.detail.target && event.detail.target.id === 'cart-drawer-body') {
       event.detail.target.dataset.drawerHydrated = 'true';
+      var scrollEl = event.detail.target.querySelector('.cart-drawer-scroll');
+      if (scrollEl && cartDrawerScroll) scrollEl.scrollTop = cartDrawerScroll;
     }
     if (event.detail.target && event.detail.target.id === 'search-suggestions') {
       initSearchSuggestionsKeyboard();
       updateSearchDropdownState();
+    }
+  });
+
+  window.addEventListener('pageshow', function (e) {
+    var nav = window.performance && performance.getEntriesByType('navigation')[0];
+    var isBack = e.persisted || (nav && nav.type === 'back_forward');
+    if (isBack && document.querySelector('#otp-verify-form, form[action*="login-email-otp"]')) {
+      window.location.reload();
     }
   });
 
@@ -809,6 +830,19 @@ document.addEventListener('DOMContentLoaded', () => {
               if (match) curSymbol = match[0].trim() + ' ';
             }
             priceEl.textContent = curSymbol + parseFloat(data.price).toFixed(2).replace(/\.00$/, '');
+          }
+        }
+
+        var mrpEl = document.getElementById('jm-qv-mrp');
+        if (mrpEl) {
+          if (data.is_flash_sale === 'true' && (data.formatted_original_price || data.original_price)) {
+            mrpEl.textContent = data.formatted_original_price || (curSymbol + parseFloat(data.original_price).toFixed(2).replace(/\.00$/, ''));
+            mrpEl.classList.remove('d-none');
+          } else if (data.has_mrp_discount === 'true' && (data.formatted_mrp || data.mrp)) {
+            mrpEl.textContent = data.formatted_mrp || (curSymbol + parseFloat(data.mrp).toFixed(2).replace(/\.00$/, ''));
+            mrpEl.classList.remove('d-none');
+          } else {
+            mrpEl.classList.add('d-none');
           }
         }
 
@@ -1482,7 +1516,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function isCardFullyInCart(card, defaultInCart) {
-    if (!window.jmCartItemKeys || window.jmCartItemKeys.size === 0) return defaultInCart;
+    if (!defaultInCart || !window.jmCartItemKeys || window.jmCartItemKeys.size === 0) return false;
     var pid = card.dataset.productId ? String(card.dataset.productId) : '';
     if (!pid) return defaultInCart;
 
@@ -1494,15 +1528,19 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {}
 
     if (variantsData && variantsData.length > 0) {
+      var inStockCount = 0;
       for (var i = 0; i < variantsData.length; i++) {
         var v = variantsData[i];
-        if (v && v.stock > 0 && !window.jmCartItemKeys.has(pid + '_' + String(v.id))) {
-          return false;
+        if (v && v.stock > 0) {
+          inStockCount++;
+          if (!window.jmCartItemKeys.has(pid + '_' + String(v.id))) {
+            return false;
+          }
         }
       }
-      return true;
+      return inStockCount > 0;
     }
-    return window.jmCartItemKeys.has(pid) ? true : defaultInCart;
+    return window.jmCartItemKeys.has(pid);
   }
 
   function setProductCardCartState(productId, inCart) {

@@ -18,12 +18,12 @@
           {% if payment_pending %}
           <h1 class="h3 fw-bold text-dark mb-2">{% trans "Confirming your payment..." %}</h1>
           <p class="text-muted mb-0 fs-6">
-            {% blocktrans with number=order.order_number %}Order <strong class="text-dark">#{{ number }}</strong> is awaiting payment confirmation. This page will update automatically.{% endblocktrans %}
+            {% blocktrans with number=order.order_number %}Order <strong class="text-dark">{{ number }}</strong> is awaiting payment confirmation. This page will update automatically.{% endblocktrans %}
           </p>
           {% else %}
           <h1 class="h3 fw-bold text-dark mb-2">{% trans "Thank you for your order!" %}</h1>
           <p class="text-muted mb-0 fs-6">
-            {% blocktrans with number=order.order_number %}Order <strong class="text-dark">#{{ number }}</strong> has been confirmed.{% endblocktrans %}
+            {% blocktrans with number=order.order_number %}Order <strong class="text-dark">{{ number }}</strong> has been confirmed.{% endblocktrans %}
           </p>
           {% endif %}
         </div>

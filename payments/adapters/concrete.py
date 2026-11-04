@@ -442,10 +442,15 @@ class AfterpayAdapter(PaymentGatewayAdapter):
         order = Order.objects.filter(pk=order_id).first() if order_id else None
 
         #build absolute URLs
-        host = getattr(settings, "ALLOWED_HOSTS", ["localhost"])[0]
-        if host == "*" or not (host.startswith("http://") or host.startswith("https://")):
-            protocol = "https://" if not settings.DEBUG else "http://"
-            host = f"{protocol}{host if host != '*' else 'localhost:8000'}"
+        request_host = metadata.get("request_host") or metadata.get("base_url")
+        if request_host:
+            protocol = "http://" if (settings.DEBUG and "localhost" in request_host) else "https://"
+            host = request_host if request_host.startswith("http") else f"{protocol}{request_host}"
+        else:
+            host = getattr(settings, "ALLOWED_HOSTS", ["localhost"])[0]
+            if host == "*" or not (host.startswith("http://") or host.startswith("https://")):
+                protocol = "https://" if not settings.DEBUG else "http://"
+                host = f"{protocol}{host if host != '*' else 'localhost:8000'}"
 
         confirm_url = f"{host.rstrip('/')}/checkout/pay/afterpay/callback/?order_id={order_id}"
         cancel_url = f"{host.rstrip('/')}/checkout/"
@@ -597,11 +602,11 @@ class AfterpayAdapter(PaymentGatewayAdapter):
 
     def capture_order(self, *, order_token: str, order_id: str) -> dict[str, Any]:
         """
-        Call Afterpay capture endpoint: POST /v2/checkouts/{orderToken}/capture
+        Call Afterpay capture endpoint: POST /v2/payments/capture
         """
         merchant_id, secret_key, env_mode, _, _ = _get_afterpay_credentials()
         base_url = env_mode if env_mode.startswith("http") else f"https://{env_mode.rstrip('/')}"
-        endpoint = f"{base_url}/v2/checkouts/{order_token}/capture"
+        endpoint = f"{base_url}/v2/payments/capture"
 
         import base64
         import requests
@@ -614,8 +619,18 @@ class AfterpayAdapter(PaymentGatewayAdapter):
         }
 
         try:
-            resp = requests.post(endpoint, json={"merchantReference": str(order_id)}, headers=headers, timeout=15)
-            return resp.json()
+            payload = {
+                "token": order_token,
+                "merchantReference": str(order_id),
+            }
+            resp = requests.post(endpoint, json=payload, headers=headers, timeout=15)
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"status": "ERROR", "message": resp.text}
+            if resp.status_code not in (200, 201):
+                data.setdefault("status", "ERROR")
+            return data
         except Exception as exc:
             logging.exception("Afterpay capture failed for order %s token %s", order_id, order_token)
             return {"status": "ERROR", "message": str(exc)}
@@ -628,7 +643,62 @@ class AfterpayAdapter(PaymentGatewayAdapter):
         )
 
     def refund(self, *, transaction_id: str, amount: Decimal) -> PaymentCaptureResult:
-        return PaymentCaptureResult(success=True, transaction_id=f"afterpay_refund_{transaction_id}")
+        """
+        Call Afterpay refund endpoint: POST /v2/payments/{orderId}/refund
+        """
+        if amount is None or Decimal(str(amount)) <= Decimal("0"):
+            return PaymentCaptureResult(success=False, error_message="Refund amount must be greater than zero.")
+
+        merchant_id, secret_key, env_mode, default_currency, _ = _get_afterpay_credentials()
+
+        #simulated transactions or dummy credentials fallback
+        if (
+            not merchant_id
+            or not secret_key
+            or merchant_id.lower().startswith("dummy")
+            or transaction_id.startswith("sim_")
+            or transaction_id.startswith("afterpay_sim")
+            or transaction_id.startswith("afterpay_tx_")
+        ):
+            return PaymentCaptureResult(
+                success=True,
+                transaction_id=f"afterpay_sim_refund_{transaction_id}",
+                metadata={"is_simulation": True},
+            )
+
+        base_url = env_mode if env_mode.startswith("http") else f"https://{env_mode.rstrip('/')}"
+        endpoint = f"{base_url}/v2/payments/{transaction_id}/refund"
+
+        import base64
+        import requests
+        auth_bytes = f"{merchant_id}:{secret_key}".encode("utf-8")
+        auth_str = base64.b64encode(auth_bytes).decode("ascii")
+        headers = {
+            "Authorization": f"Basic {auth_str}",
+            "Content-Type": "application/json",
+            "User-Agent": "Sarocchi-Ecommerce/1.0 (Django; New Zealand)",
+        }
+
+        try:
+            payload = {
+                "amount": {
+                    "amount": f"{amount:.2f}",
+                    "currency": default_currency,
+                },
+                "merchantReference": f"ref_{transaction_id[:20]}",
+            }
+            resp = requests.post(endpoint, json=payload, headers=headers, timeout=15)
+            data = resp.json() if resp.content else {}
+            if resp.status_code in (200, 201):
+                refund_id = data.get("id") or f"afterpay_refund_{transaction_id}"
+                return PaymentCaptureResult(success=True, transaction_id=refund_id, metadata=data)
+            else:
+                err_msg = data.get("message") or f"Afterpay refund failed (status {resp.status_code})"
+                logging.error("Afterpay refund error: %s", data)
+                return PaymentCaptureResult(success=False, error_message=err_msg, metadata=data)
+        except Exception as exc:
+            logging.exception("Failed to refund Afterpay transaction %s", transaction_id)
+            return PaymentCaptureResult(success=False, error_message=str(exc))
 
     def verify_webhook(self, *, payload: bytes, signature: str) -> dict[str, Any]:
         return json.loads(payload.decode())

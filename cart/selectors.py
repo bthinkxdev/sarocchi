@@ -70,6 +70,7 @@ class CartSummaryLine:
     max_stock: int = 0
     is_out_of_stock: bool = False
     exceeds_stock: bool = False
+    has_variant_changed: bool = False
 
 
 @dataclass
@@ -256,9 +257,8 @@ def get_cart_summary(
         line_subtotal = unit_price * item.quantity
         subtotal += line_subtotal
         item_count += item.quantity
-        max_stock = item.variant.stock_quantity if item.variant else item.product.stock_quantity
-        if item.variant is None and getattr(item, "product_variant_count", 0) > 0:
-            max_stock = 0
+        has_variant_changed = bool(item.variant is None and getattr(item, "product_variant_count", 0) > 0)
+        max_stock = 0 if has_variant_changed else (item.variant.stock_quantity if item.variant else item.product.stock_quantity)
         if max_stock is None:
             max_stock = 0
         is_out = not item.product.is_in_stock or max_stock <= 0
@@ -281,6 +281,7 @@ def get_cart_summary(
                 max_stock=max_stock,
                 is_out_of_stock=is_out,
                 exceeds_stock=exceeds,
+                has_variant_changed=has_variant_changed,
             )
         )
 
