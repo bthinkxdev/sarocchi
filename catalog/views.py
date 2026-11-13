@@ -60,14 +60,14 @@ def _parse_plp_filters(request: HttpRequest) -> dict:
     
     try:
         from catalog.models import ProductAttribute
-        valid_attrs = set(ProductAttribute.objects.values_list("name", flat=True))
+        valid_attrs = {name.lower(): name for name in ProductAttribute.objects.values_list("name", flat=True)}
         dynamic_attrs = {}
         selected_attr_values = []
-        for attr_name in valid_attrs:
-            values = request.GET.getlist(attr_name)
-            if values:
+        for param, values in request.GET.lists():
+            if attr_name := valid_attrs.get(param.lower()):
                 dynamic_attrs[attr_name] = values
                 for v in values:
+                    selected_attr_values.append(f"{attr_name.title()}:{v}")
                     selected_attr_values.append(f"{attr_name}:{v}")
         if dynamic_attrs:
             filters["dynamic_attrs"] = dynamic_attrs
@@ -120,7 +120,7 @@ def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResp
     sort = request.GET.get("sort", "newest")
     page = int(request.GET.get("page", 1))
     plp_data = get_plp_products(filters=filters, sort=sort, page=page, user=request.user)
-    filter_options = get_plp_filter_options()
+    filter_options = get_plp_filter_options(category_id=filters.get("category_id"))
 
     active_cat = resolved_cat if resolved_cat else None
     

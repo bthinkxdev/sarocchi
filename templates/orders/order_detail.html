@@ -206,6 +206,12 @@
             <span class="text-muted">{% trans "Delivery Fee" %}</span>
             <span>{% money_label order.delivery_charge order.currency %}</span>
           </div>
+          {% if order.tax_amount > 0 %}
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">{% trans "Tax" %} ({{ order.tax_rate }}%)</span>
+            <span>{% money_label order.tax_amount order.currency %}</span>
+          </div>
+          {% endif %}
           <hr>
           <div class="d-flex justify-content-between">
             <span class="fw-bold">{% trans "Total" %}</span>

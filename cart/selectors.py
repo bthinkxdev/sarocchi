@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Optional
 
 from django.db.models import Prefetch, Sum, Count
@@ -83,6 +83,8 @@ class CartSummary:
     coupon_code: str = ""
     coupon_discount: Decimal = Decimal("0.00")
     delivery_charge: Decimal = Decimal("0.00")
+    tax_rate: Decimal = Decimal("0.00")
+    tax_amount: Decimal = Decimal("0.00")
     grand_total: Decimal = Decimal("0.00")
     item_count: int = 0
     has_stock_issues: bool = False
@@ -317,7 +319,13 @@ def get_cart_summary(
             coupon_code = ""
             coupon_discount = Decimal("0.00")
 
-    grand_total = max(subtotal - coupon_discount + delivery_charge, Decimal("0.00"))
+    from core.services import get_site_settings
+    settings = get_site_settings()
+    tax_rate = getattr(settings, "tax_rate_percent", Decimal("0.00")) or Decimal("0.00")
+    taxable_amount = max(subtotal - coupon_discount, Decimal("0.00"))
+    tax_amount = (taxable_amount * (tax_rate / Decimal("100"))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if tax_rate > 0 else Decimal("0.00")
+
+    grand_total = max(taxable_amount + delivery_charge + tax_amount, Decimal("0.00"))
 
     return CartSummary(
         cart=cart,
@@ -326,6 +334,8 @@ def get_cart_summary(
         coupon_code=coupon_code,
         coupon_discount=coupon_discount,
         delivery_charge=delivery_charge,
+        tax_rate=tax_rate,
+        tax_amount=tax_amount,
         grand_total=grand_total,
         item_count=item_count,
         has_stock_issues=has_stock_issues,

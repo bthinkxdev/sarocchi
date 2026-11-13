@@ -298,6 +298,13 @@
           <button type="submit" class="btn btn-dark btn-sm px-3">{% trans "Apply" %}</button>
         </form>
         {% endif %}
+        {% if summary.tax_amount > 0 %}
+        <div class="d-flex justify-content-between py-2 border-bottom text-muted" style="font-size: 0.875rem;">
+          <span>{% trans "Tax" %} ({{ summary.tax_rate }}%)</span>
+          <span>{{ display_currency.symbol }} {{ summary.tax_amount }}</span>
+        </div>
+        {% endif %}
+
         <div class="d-flex justify-content-between fw-semibold mt-3 pt-2 border-top">
           <span>{% trans "Total" %}</span>
           <span class="text-floward">{{ display_currency.symbol }} {{ summary.grand_total }}</span>

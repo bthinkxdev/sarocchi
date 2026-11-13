@@ -111,8 +111,12 @@ def _sync_checkout_pending_order(
     order.total_amount = summary.grand_total
     order.idempotency_key = idempotency_key
     order.delivery_address_snapshot = address_snapshot
+    if not isinstance(order.invoice_details, dict):
+        order.invoice_details = {}
+    order.invoice_details["tax_rate"] = str(summary.tax_rate)
+    order.invoice_details["tax_amount"] = str(summary.tax_amount)
     order.save(
-        update_fields=["subtotal", "coupon_discount", "delivery_charge", "total_amount", "idempotency_key", "delivery_address_snapshot", "updated_at"]
+        update_fields=["subtotal", "coupon_discount", "delivery_charge", "total_amount", "idempotency_key", "delivery_address_snapshot", "invoice_details", "updated_at"]
     )
 
     if gateway_key == "cod":
@@ -263,6 +267,8 @@ def place_order(
 
     invoice_details = dict(session.invoice_details or {})
     invoice_details["is_guest_checkout"] = is_guest_checkout
+    invoice_details["tax_rate"] = str(summary.tax_rate)
+    invoice_details["tax_amount"] = str(summary.tax_amount)
 
     try:
         order = Order.objects.create(

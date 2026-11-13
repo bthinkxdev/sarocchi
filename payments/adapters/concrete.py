@@ -555,7 +555,8 @@ class AfterpayAdapter(PaymentGatewayAdapter):
         headers = {
             "Authorization": f"Basic {auth_str}",
             "Content-Type": "application/json",
-            "User-Agent": "Sarocchi-Ecommerce/1.0 (Django; New Zealand)",
+            "Accept": "application/json",
+            "User-Agent": f"Sarocchi/1.0.0 (CustomPlatform/1.0; Python/3.13; Sarocchi/{merchant_id}) https://sarocchi.luxe",
         }
 
         try:
@@ -615,7 +616,8 @@ class AfterpayAdapter(PaymentGatewayAdapter):
         headers = {
             "Authorization": f"Basic {auth_str}",
             "Content-Type": "application/json",
-            "User-Agent": "Sarocchi-Ecommerce/1.0 (Django; New Zealand)",
+            "Accept": "application/json",
+            "User-Agent": f"Sarocchi/1.0.0 (CustomPlatform/1.0; Python/3.13; Sarocchi/{merchant_id}) https://sarocchi.luxe",
         }
 
         try:
@@ -676,7 +678,8 @@ class AfterpayAdapter(PaymentGatewayAdapter):
         headers = {
             "Authorization": f"Basic {auth_str}",
             "Content-Type": "application/json",
-            "User-Agent": "Sarocchi-Ecommerce/1.0 (Django; New Zealand)",
+            "Accept": "application/json",
+            "User-Agent": f"Sarocchi/1.0.0 (CustomPlatform/1.0; Python/3.13; Sarocchi/{merchant_id}) https://sarocchi.luxe",
         }
 
         try:

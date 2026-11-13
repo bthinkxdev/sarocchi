@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 
@@ -179,6 +181,18 @@ class Order(TimeStampedModel):
         if self.invoice_details and "is_guest_checkout" in self.invoice_details:
             return self.invoice_details["is_guest_checkout"]
         return True
+
+    @property
+    def tax_rate(self) -> Decimal:
+        if self.invoice_details and "tax_rate" in self.invoice_details:
+            return Decimal(str(self.invoice_details["tax_rate"]))
+        return Decimal("0.00")
+
+    @property
+    def tax_amount(self) -> Decimal:
+        if self.invoice_details and "tax_amount" in self.invoice_details:
+            return Decimal(str(self.invoice_details["tax_amount"]))
+        return Decimal("0.00")
 
     @property
     def customer_display_name(self) -> str:

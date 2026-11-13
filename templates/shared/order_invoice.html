@@ -339,6 +339,12 @@
                     <td>- {% money_label order.coupon_discount order.currency %}</td>
                 </tr>
                 {% endif %}
+                {% if order.tax_amount > 0 %}
+                <tr>
+                    <td>Tax ({{ order.tax_rate }}%)</td>
+                    <td>{% money_label order.tax_amount order.currency %}</td>
+                </tr>
+                {% endif %}
                 <tr class="total-row">
                     <td>Total Amount</td>
                     <td>{% money_label order.total_amount order.currency %}</td>

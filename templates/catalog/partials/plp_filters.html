@@ -52,8 +52,7 @@
     <div class="mb-3">
       <label class="form-label small">{% trans "Collection" %}</label>
       <select name="collection" class="form-select form-select-sm">
-        <option value="">{% trans "All Products" %}</option>
-        <option value="all" {% if filters.collection == 'all' %}selected{% endif %}>{% trans "All Collections" %}</option>
+        <option value="">{% trans "All Collections" %}</option>
         {% for col in collections %}
         <option value="{{ col.slug }}" {% if filters.collection == col.slug %}selected{% endif %}>{{ col.name }}</option>
         {% endfor %}
@@ -169,6 +168,6 @@
   }
 
   const hasFilters = f => Array.from(f.elements).some(e => e.name && e.type !== 'hidden' && (e.type === 'checkbox' ? e.checked : e.name === 'sort' ? e.value !== 'newest' : !!(e.value && e.value.trim())));
-  const handleFilter = b => hasFilters(b.form) && b.form.requestSubmit();
+  const handleFilter = b => b.form.requestSubmit();
   const handleClear = b => location.search.replace(/[?&](sort|page)=[^&]*/g, '').replace('?', '') ? location.href = b.form.action : b.form.reset();
 </script>

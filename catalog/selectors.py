@@ -774,7 +774,7 @@ def get_category_by_slug(*, slug: str):
     return Category.objects.filter(slug=slug, is_active=True).first()
 
 
-def get_plp_filter_options() -> dict:
+def get_plp_filter_options(category_id: int | None = None) -> dict:
     """Return sidebar filter options for PLP."""
     from catalog.models import Category, ProductAttribute, Collection
     categories = list(Category.objects.filter(is_active=True, parent__isnull=True).prefetch_related("children").order_by("display_order", "name"))
@@ -786,8 +786,13 @@ def get_plp_filter_options() -> dict:
     from django.db.models import Prefetch, Q
     from catalog.models import ProductAttributeValue
     
+    val_filter = Q(products__is_active=True) | Q(variants__product__is_active=True)
+    if category_id:
+        cats = [category_id, *Category.objects.filter(parent_id=category_id, is_active=True).values_list("pk", flat=True)]
+        val_filter &= Q(products__category_id__in=cats) | Q(variants__product__category_id__in=cats)
+
     active_value_ids = list(ProductAttributeValue.objects.filter(
-        Q(products__is_active=True) | Q(variants__product__is_active=True)
+        val_filter
     ).values_list("id", flat=True).distinct())
     
     raw_attributes = list(
